@@ -17,10 +17,11 @@ import (
 )
 
 var (
-	VERSION    = "0.0.0.dev"
-	TPRGroup   = "gianarb.com"
-	TPRVersion = "v1beta1"
-	TPRName    = "tick"
+	VERSION       = "0.0.0.dev"
+	TPRGroup      = "gianarb.com"
+	TPRVersion    = "v1beta1"
+	TPRName       = "tick"
+	TPRNamePlural = "ticks"
 )
 
 type Options struct {
@@ -63,7 +64,7 @@ func New(options Options) *InfluxDBOperator {
 
 func (operator *InfluxDBOperator) Run(stopCh <-chan struct{}, wg *sync.WaitGroup) {
 	log.Printf("TICK OSS operator started. Version %v\n", VERSION)
-	operator.k8swrap.RegisterThridPartyResource(TPRGroup, TPRName, TPRVersion)
+	operator.k8swrap.RegisterThridPartyResource(TPRGroup, TPRName, TPRNamePlural, TPRVersion)
 	events, errChan := operator.processTickEvents(stopCh)
 	go func(events <-chan *TICKSpec) {
 		for {
@@ -83,14 +84,14 @@ func (operator *InfluxDBOperator) Run(stopCh <-chan struct{}, wg *sync.WaitGroup
 func (operator *InfluxDBOperator) processTickEvents(stopCh <-chan struct{}) (<-chan *TICKSpec, <-chan error) {
 	events := make(chan *TICKSpec)
 	errc := make(chan error, 1)
-	source := cache.NewListWatchFromClient(operator.tickTprClient, TPRName, v1.NamespaceAll, fields.Everything())
+	source := cache.NewListWatchFromClient(operator.tickTprClient, TPRNamePlural, v1.NamespaceAll, fields.Everything())
 	createAddHandler := func(obj interface{}) {
 		event := obj.(*TICKSpec)
 		event.Type = "ADDED"
 		events <- event
 	}
 
-	createDeleteHandler := func(obj interface{}) {
+	deleteHandler := func(obj interface{}) {
 		event := obj.(*TICKSpec)
 		event.Type = "DELETED"
 		events <- event
@@ -109,7 +110,7 @@ func (operator *InfluxDBOperator) processTickEvents(stopCh <-chan struct{}) (<-c
 		cache.ResourceEventHandlerFuncs{
 			AddFunc:    createAddHandler,
 			UpdateFunc: updateHandler,
-			DeleteFunc: createDeleteHandler,
+			DeleteFunc: deleteHandler,
 		})
 
 	go controller.Run(stopCh)

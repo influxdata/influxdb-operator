@@ -29,18 +29,18 @@ func NewK8sWrap(client kubernetes.Interface, crdClient apiextensionsclient.Inter
 	}
 }
 
-func (k *K8sWrap) RegisterThridPartyResource(groupName, name, version string) error {
-	_, err := k.crdClient.ApiextensionsV1beta1().CustomResourceDefinitions().Get(name, metav1.GetOptions{})
+func (k *K8sWrap) RegisterThridPartyResource(groupName, name, plural, version string) error {
+	_, err := k.crdClient.ApiextensionsV1beta1().CustomResourceDefinitions().Get(plural+"."+groupName, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			crdObject := &apiextensionsv1beta1.CustomResourceDefinition{
-				ObjectMeta: metav1.ObjectMeta{Name: name + "." + groupName},
+				ObjectMeta: metav1.ObjectMeta{Name: plural + "." + groupName},
 				Spec: apiextensionsv1beta1.CustomResourceDefinitionSpec{
 					Group:   groupName,
 					Version: version,
 					Scope:   apiextensionsv1beta1.NamespaceScoped,
 					Names: apiextensionsv1beta1.CustomResourceDefinitionNames{
-						Plural: name,
+						Plural: plural,
 						Kind:   name,
 					},
 				},
@@ -52,7 +52,7 @@ func (k *K8sWrap) RegisterThridPartyResource(groupName, name, version string) er
 			}
 
 			err = wait.Poll(500*time.Millisecond, 60*time.Second, func() (bool, error) {
-				createdCRD, err := k.crdClient.ApiextensionsV1beta1().CustomResourceDefinitions().Get(name, metav1.GetOptions{})
+				createdCRD, err := k.crdClient.ApiextensionsV1beta1().CustomResourceDefinitions().Get(plural+"."+groupName, metav1.GetOptions{})
 				if err != nil {
 					return false, err
 				}
