@@ -1,10 +1,11 @@
-apiVersion: "gianarb.com/v1beta1"
-kind: tick
+apiVersion: "gianarb.com/v1alpha1"
+kind: influxdb
 
 metadata:
+  name: monitor
 
 spec:
-  image: "influxdb:1.4.0"
+  baseImage: "docker.io/influxdb:1.4.0"
 
   # kapacitor:
   #   image: "kapacitor:1.4.0"

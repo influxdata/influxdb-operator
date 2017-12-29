@@ -15,11 +15,7 @@ import (
 )
 
 var (
-	VERSION       = "0.0.0.dev"
-	TPRGroup      = "gianarb.com"
-	TPRVersion    = "v1beta1"
-	TPRName       = "tickCluster"
-	TPRNamePlural = "tickClusters"
+	VERSION = "0.0.0.dev"
 )
 
 type Options struct {
@@ -72,7 +68,7 @@ func (operator *InfluxDBOperator) Run(stopCh <-chan struct{}, wg *sync.WaitGroup
 		},
 		Spec: extensionsobj.CustomResourceDefinitionSpec{
 			Group:   "gianarb.com",
-			Version: "alphav1",
+			Version: "v1alpha1",
 			Scope:   extensionsobj.NamespaceScoped,
 			Names: extensionsobj.CustomResourceDefinitionNames{
 				Plural: "influxdbs",
