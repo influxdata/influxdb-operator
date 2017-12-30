@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	Group   = "tick.gianarb.com"
+	Group   = "gianarb.com"
 	Version = "v1alpha1"
 )
 
@@ -23,17 +23,13 @@ type CrdKinds struct {
 	InfluxDB    CrdKind
 }
 
-var DefaultCrdKinds CrdKinds = CrdKinds{
-	KindsString: "",
-	InfluxDB:    CrdKind{Plural: InfluxDBPlural, Kind: InfluxDBKind},
-}
-
 type TickV1alpha1Interface interface {
 	RESTClient() rest.Interface
+	InfluxDBs(namespace string) dynamic.ResourceInterface
 }
 
 type TickV1alpha1Client struct {
-	restClient    rest.Interface
+	restClient    *rest.RESTClient
 	dynamicClient *dynamic.Client
 }
 
@@ -41,7 +37,7 @@ func (c *TickV1alpha1Client) InfluxDBs(namespace string) dynamic.ResourceInterfa
 	return newInfluxdbs(c.restClient, c.dynamicClient, namespace)
 }
 
-func NewForConfig(c *rest.Config) (*rest.RESTClient, dynamic.Interface, error) {
+func NewForConfig(c *rest.Config) (*TickV1alpha1Client, error) {
 	config := *c
 	config.GroupVersion = &schema.GroupVersion{
 		Group:   Group,
@@ -49,14 +45,20 @@ func NewForConfig(c *rest.Config) (*rest.RESTClient, dynamic.Interface, error) {
 	}
 	config.APIPath = "/apis"
 	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: scheme.Codecs}
-	client, err := rest.RESTClientFor(&config)
-	if err != nil {
-		panic(err)
-	}
 
 	dynamicClient, err := dynamic.NewClient(&config)
+
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return client, dynamicClient, nil
+
+	client, err := rest.RESTClientFor(&config)
+	if err != nil {
+		return nil, err
+	}
+
+	return &TickV1alpha1Client{
+		restClient:    client,
+		dynamicClient: dynamicClient,
+	}, nil
 }
