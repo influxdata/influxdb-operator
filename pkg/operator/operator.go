@@ -3,7 +3,6 @@ package operator
 import (
 	"log"
 	"sync"
-	"time"
 
 	"github.com/gianarb/influxdb-operator/pkg/client/tick/v1alpha1"
 	extensionsobj "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -29,6 +28,10 @@ type InfluxDBOperator struct {
 	tickCs     v1alpha1.TickV1alpha1Client
 	clientSet  clientset.Interface
 	tickInf    cache.SharedIndexInformer
+}
+
+func (o *InfluxDBOperator) handleAddInfluxDB(obj interface{}) {
+	panic("adding ugh?")
 }
 
 func New(options Options) *InfluxDBOperator {
@@ -59,11 +62,17 @@ func New(options Options) *InfluxDBOperator {
 
 	operator.tickInf = cache.NewSharedIndexInformer(
 		&cache.ListWatch{
-			ListFunc:  operator.tickCs.InfluxDBs("default").List,
-			WatchFunc: operator.tickCs.InfluxDBs("default").Watch,
+			ListFunc:  operator.tickCs.InfluxDBs(metav1.NamespaceAll).List,
+			WatchFunc: operator.tickCs.InfluxDBs(metav1.NamespaceAll).Watch,
 		},
-		&v1alpha1.Influxdb{}, 5*time.Minute, cache.Indexers{},
+		&v1alpha1.Influxdb{}, 0, cache.Indexers{},
 	)
+
+	operator.tickInf.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    operator.handleAddInfluxDB,
+		UpdateFunc: nil,
+		DeleteFunc: nil,
+	})
 
 	return operator
 }
@@ -97,4 +106,6 @@ func (operator *InfluxDBOperator) Run(stopCh <-chan struct{}, wg *sync.WaitGroup
 		}
 		log.Printf("CRD created %s", crd.Spec.Names.Kind)
 	}
+
+	go operator.tickInf.Run(stopCh)
 }
