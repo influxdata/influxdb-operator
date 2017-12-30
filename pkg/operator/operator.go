@@ -3,6 +3,7 @@ package operator
 import (
 	"log"
 	"sync"
+	"time"
 
 	"github.com/gianarb/influxdb-operator/pkg/client/tick/v1alpha1"
 	extensionsobj "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -10,7 +11,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -25,8 +26,9 @@ type Options struct {
 type InfluxDBOperator struct {
 	Options
 	kubeClient *kubernetes.Clientset
-	tickCs     *rest.RESTClient
+	tickCs     v1alpha1.TickV1alpha1Client
 	clientSet  clientset.Interface
+	tickInf    cache.SharedIndexInformer
 }
 
 func New(options Options) *InfluxDBOperator {
@@ -43,17 +45,25 @@ func New(options Options) *InfluxDBOperator {
 	kubeClient := kubernetes.NewForConfigOrDie(config)
 	cs := clientset.NewForConfigOrDie(config)
 
-	rest, _, err := v1alpha1.NewForConfig(config)
+	rest, err := v1alpha1.NewForConfig(config)
 	if err != nil {
 		log.Fatalf("Couldn't get Tick trd client: %s", err)
 	}
 
 	operator := &InfluxDBOperator{
 		Options:    options,
-		tickCs:     rest,
+		tickCs:     *rest,
 		kubeClient: kubeClient,
 		clientSet:  cs,
 	}
+
+	operator.tickInf = cache.NewSharedIndexInformer(
+		&cache.ListWatch{
+			ListFunc:  operator.tickCs.InfluxDBs("default").List,
+			WatchFunc: operator.tickCs.InfluxDBs("default").Watch,
+		},
+		&v1alpha1.Influxdb{}, 5*time.Minute, cache.Indexers{},
+	)
 
 	return operator
 }
