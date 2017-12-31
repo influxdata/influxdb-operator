@@ -24,11 +24,12 @@ type Config struct {
 }
 
 type Operator struct {
-	config     Config
-	kubeClient *kubernetes.Clientset
-	tickCs     v1alpha1.TickV1alpha1Client
-	clientSet  clientset.Interface
-	tickInf    cache.SharedIndexInformer
+	config            Config
+	kubeClient        *kubernetes.Clientset
+	tickCs            v1alpha1.TickV1alpha1Client
+	clientSet         clientset.Interface
+	influxInformer    cache.SharedIndexInformer
+	kapacitorInformer cache.SharedIndexInformer
 }
 
 func (o *Operator) getObject(obj interface{}) (metav1.Object, bool) {
@@ -77,6 +78,7 @@ func (o *Operator) handleAddInfluxDB(obj interface{}) {
 	labels["name"] = fmt.Sprintf("%s-%s", v1alpha1.InfluxDBPlural, oret.GetName())
 	labels["resource"] = v1alpha1.InfluxDBPlural
 
+	// Create a deployment for Influx
 	replicas := int32(1)
 	deployment := &v1beta1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -102,6 +104,80 @@ func (o *Operator) handleAddInfluxDB(obj interface{}) {
 								v1.ContainerPort{
 									Name:          "http",
 									ContainerPort: 8086,
+									Protocol:      v1.ProtocolTCP,
+								},
+							},
+							//VolumeMounts: []v1.VolumeMount{},
+							//Resources:    v1.ResourceRequirements{},
+						},
+					},
+					//Volumes: []v1.Volume{},
+				},
+			},
+		},
+	}
+
+	_, err := o.kubeClient.AppsV1beta1().Deployments(oret.GetNamespace()).Create(deployment)
+	fmt.Print(err) //TODO: handle in a different way?
+}
+
+func (o *Operator) handleDeleteKapacitor(obj interface{}) {
+	oret, ok := o.getObject(obj)
+
+	if !ok {
+		//TODO: error? panic? how?
+		return
+	}
+
+	orphanDependents := false
+	deploymentName := fmt.Sprintf("%s-%s", v1alpha1.KapacitorPlural, oret.GetName())
+	err := o.kubeClient.ExtensionsV1beta1().Deployments(oret.GetNamespace()).Delete(deploymentName, &metav1.DeleteOptions{
+		OrphanDependents: &orphanDependents, //TODO(fntlnz): orphan dependents is now deprecated, support the new way too!
+	})
+	if err != nil {
+		log.Printf("Error deleting deployment %s. %s", deploymentName, err)
+	}
+}
+
+func (o *Operator) handleAddKapacitor(obj interface{}) {
+	oret, ok := o.getObject(obj)
+
+	if !ok {
+		//TODO: error? panic? how?
+		return
+	}
+
+	kapacitorSpec := obj.(*v1alpha1.Kapacitor)
+
+	labels := o.config.Labels
+	labels["name"] = fmt.Sprintf("%s-%s", v1alpha1.KapacitorPlural, oret.GetName())
+	labels["resource"] = v1alpha1.KapacitorPlural
+
+	replicas := int32(1)
+	deployment := &v1beta1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      labels["name"],
+			Labels:    labels,
+			Namespace: oret.GetNamespace(),
+		},
+		Spec: v1beta1.DeploymentSpec{
+			Replicas: &replicas,
+			Template: v1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels:    labels,
+					Namespace: oret.GetNamespace(),
+				},
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{
+						v1.Container{
+							Name:            oret.GetName(),
+							Image:           kapacitorSpec.Spec.BaseImage,
+							ImagePullPolicy: "Always",
+							Env:             []v1.EnvVar{},
+							Ports: []v1.ContainerPort{
+								v1.ContainerPort{
+									Name:          "http",
+									ContainerPort: 9092,
 									Protocol:      v1.ProtocolTCP,
 								},
 							},
@@ -145,7 +221,13 @@ func New(options Config) *Operator {
 		clientSet:  cs,
 	}
 
-	operator.tickInf = cache.NewSharedIndexInformer(
+	registerInfluxInformer(operator)
+	registerKapacitorInformer(operator)
+	return operator
+}
+
+func registerInfluxInformer(operator *Operator) {
+	operator.influxInformer = cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc:  operator.tickCs.InfluxDBs(metav1.NamespaceAll).List,
 			WatchFunc: operator.tickCs.InfluxDBs(metav1.NamespaceAll).Watch,
@@ -153,13 +235,27 @@ func New(options Config) *Operator {
 		&v1alpha1.Influxdb{}, 0, cache.Indexers{},
 	)
 
-	operator.tickInf.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	operator.influxInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    operator.handleAddInfluxDB,
 		UpdateFunc: nil,
 		DeleteFunc: operator.handleDeleteInfluxDB,
 	})
+}
 
-	return operator
+func registerKapacitorInformer(operator *Operator) {
+	operator.kapacitorInformer = cache.NewSharedIndexInformer(
+		&cache.ListWatch{
+			ListFunc:  operator.tickCs.Kapacitors(metav1.NamespaceAll).List,
+			WatchFunc: operator.tickCs.Kapacitors(metav1.NamespaceAll).Watch,
+		},
+		&v1alpha1.Kapacitor{}, 0, cache.Indexers{},
+	)
+
+	operator.kapacitorInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    operator.handleAddKapacitor,
+		UpdateFunc: nil,
+		DeleteFunc: operator.handleDeleteKapacitor,
+	})
 }
 
 func (operator *Operator) Run(stopCh <-chan struct{}, wg *sync.WaitGroup) {
@@ -179,8 +275,25 @@ func (operator *Operator) Run(stopCh <-chan struct{}, wg *sync.WaitGroup) {
 		},
 	}
 
+	kapacitorCrd := extensionsobj.CustomResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "kapacitors" + "." + "gianarb.com",
+			Labels: map[string]string{},
+		},
+		Spec: extensionsobj.CustomResourceDefinitionSpec{
+			Group:   "gianarb.com",
+			Version: "v1alpha1",
+			Scope:   extensionsobj.NamespaceScoped,
+			Names: extensionsobj.CustomResourceDefinitionNames{
+				Plural: "kapacitors",
+				Kind:   "kapacitor",
+			},
+		},
+	}
+
 	crds := []*extensionsobj.CustomResourceDefinition{
 		&influxCrd,
+		&kapacitorCrd,
 	}
 	crdClient := operator.clientSet.ApiextensionsV1beta1().CustomResourceDefinitions()
 	for _, crd := range crds {
@@ -189,5 +302,6 @@ func (operator *Operator) Run(stopCh <-chan struct{}, wg *sync.WaitGroup) {
 		}
 	}
 
-	go operator.tickInf.Run(stopCh)
+	go operator.kapacitorInformer.Run(stopCh)
+	go operator.influxInformer.Run(stopCh)
 }

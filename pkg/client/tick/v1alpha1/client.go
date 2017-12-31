@@ -37,6 +37,10 @@ func (c *TickV1alpha1Client) InfluxDBs(namespace string) dynamic.ResourceInterfa
 	return newInfluxdbs(c.restClient, c.dynamicClient, namespace)
 }
 
+func (c *TickV1alpha1Client) Kapacitors(namespace string) dynamic.ResourceInterface {
+	return newKapacitors(c.restClient, c.dynamicClient, namespace)
+}
+
 func NewForConfig(c *rest.Config) (*TickV1alpha1Client, error) {
 	config := *c
 	config.GroupVersion = &schema.GroupVersion{
