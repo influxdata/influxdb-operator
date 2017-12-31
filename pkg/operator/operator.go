@@ -18,23 +18,23 @@ var (
 	VERSION = "0.0.0.dev"
 )
 
-type Options struct {
+type Config struct {
 	KubeConfig string
 }
 
-type InfluxDBOperator struct {
-	Options
+type Operator struct {
+	config     Config
 	kubeClient *kubernetes.Clientset
 	tickCs     v1alpha1.TickV1alpha1Client
 	clientSet  clientset.Interface
 	tickInf    cache.SharedIndexInformer
 }
 
-func (o *InfluxDBOperator) handleAddInfluxDB(obj interface{}) {
+func (o *Operator) handleAddInfluxDB(obj interface{}) {
 	panic("adding ugh?")
 }
 
-func New(options Options) *InfluxDBOperator {
+func New(options Config) *Operator {
 	rules := clientcmd.NewDefaultClientConfigLoadingRules()
 	overrides := &clientcmd.ConfigOverrides{}
 	if options.KubeConfig != "" {
@@ -53,8 +53,8 @@ func New(options Options) *InfluxDBOperator {
 		log.Fatalf("Couldn't get Tick trd client: %s", err)
 	}
 
-	operator := &InfluxDBOperator{
-		Options:    options,
+	operator := &Operator{
+		config:     options,
 		tickCs:     *rest,
 		kubeClient: kubeClient,
 		clientSet:  cs,
@@ -77,7 +77,7 @@ func New(options Options) *InfluxDBOperator {
 	return operator
 }
 
-func (operator *InfluxDBOperator) Run(stopCh <-chan struct{}, wg *sync.WaitGroup) {
+func (operator *Operator) Run(stopCh <-chan struct{}, wg *sync.WaitGroup) {
 	log.Printf("TICK OSS operator started. Version %v\n", VERSION)
 
 	influxCrd := extensionsobj.CustomResourceDefinition{
