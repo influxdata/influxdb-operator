@@ -19,12 +19,9 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-var (
-	VERSION = "0.0.0.dev"
-)
-
 type Config struct {
 	KubeConfig string
+	Labels     map[string]string
 }
 
 type Operator struct {
@@ -43,10 +40,25 @@ func (o *Operator) getObject(obj interface{}) (metav1.Object, bool) {
 
 	oret, err := meta.Accessor(obj)
 	if err != nil {
-		//c.logger.Log("msg", "get object failed", "err", err)
+		log.Print(err)
 		return nil, false
 	}
 	return oret, true
+}
+
+func (o *Operator) handleDeleteInfluxDB(obj interface{}) {
+	oret, ok := o.getObject(obj)
+
+	if !ok {
+		//TODO: error? panic? how?
+		return
+	}
+
+	deploymentName := fmt.Sprintf("%s-%s", v1alpha1.InfluxDBPlural, oret.GetName())
+	err := o.kubeClient.ExtensionsV1beta1().Deployments("default").Delete(deploymentName, &metav1.DeleteOptions{})
+	if err != nil {
+		log.Printf("Error deleting deployment %s. %s", deploymentName, err)
+	}
 }
 
 func (o *Operator) handleAddInfluxDB(obj interface{}) {
@@ -66,27 +78,27 @@ func (o *Operator) handleAddInfluxDB(obj interface{}) {
 	if err != nil {
 		panic(err)
 	}
+
+	labels := o.config.Labels
+	labels["name"] = fmt.Sprintf("%s-%s", v1alpha1.InfluxDBPlural, oret.GetName())
+	labels["resource"] = v1alpha1.InfluxDBPlural
+
 	replicas := int32(1)
 	deployment := &v1beta1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "pappardella",
-			Labels: map[string]string{
-				"name": "pappardella",
-			},
+			Name:   labels["name"],
+			Labels: labels,
 		},
 		Spec: v1beta1.DeploymentSpec{
 			Replicas: &replicas,
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"name": "pappardella",
-					},
-					//Annotations: map[string]string{},
+					Labels: labels,
 				},
 				Spec: v1.PodSpec{
 					Containers: []v1.Container{
 						v1.Container{
-							Name:            "funghiporcini",
+							Name:            oret.GetName(),
 							Image:           influxdbSpec.Spec.BaseImage,
 							ImagePullPolicy: "Always",
 							Env:             []v1.EnvVar{},
@@ -148,15 +160,13 @@ func New(options Config) *Operator {
 	operator.tickInf.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    operator.handleAddInfluxDB,
 		UpdateFunc: nil,
-		DeleteFunc: nil,
+		DeleteFunc: operator.handleDeleteInfluxDB,
 	})
 
 	return operator
 }
 
 func (operator *Operator) Run(stopCh <-chan struct{}, wg *sync.WaitGroup) {
-	log.Printf("TICK OSS operator started. Version %v\n", VERSION)
-
 	influxCrd := extensionsobj.CustomResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   "influxdbs" + "." + "gianarb.com",

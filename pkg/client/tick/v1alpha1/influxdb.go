@@ -27,8 +27,6 @@ type influxdbs struct {
 }
 
 func (i *influxdbs) List(opts metav1.ListOptions) (runtime.Object, error) {
-	log.Printf("List: %v", opts)
-
 	log.Printf("Namespace: %s", i.namespace)   //TODO: fill this
 	log.Printf("Plural: %s", i.crdKind.Plural) //TODO: fill this
 	req := i.restClient.Get().Namespace("default").Resource(InfluxDBPlural)

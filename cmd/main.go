@@ -12,6 +12,10 @@ import (
 	"github.com/spf13/pflag"
 )
 
+var (
+	VERSION = "0.0.0.dev"
+)
+
 var options operator.Config
 
 func init() {
@@ -29,6 +33,11 @@ func main() {
 	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM) // Push signals into channel
 
 	wg := &sync.WaitGroup{} // Goroutines can add themselves to this to be waited on
+
+	options.Labels = map[string]string{
+		"operator": "influxdb-operator",
+		"version":  VERSION,
+	}
 
 	operator.New(options).Run(stop, wg)
 
