@@ -27,8 +27,6 @@ type influxdbs struct {
 }
 
 func (i *influxdbs) List(opts metav1.ListOptions) (runtime.Object, error) {
-	log.Printf("Namespace: %s", i.namespace)   //TODO: fill this
-	log.Printf("Plural: %s", i.crdKind.Plural) //TODO: fill this
 	req := i.restClient.Get().Namespace("default").Resource(InfluxDBPlural)
 
 	buf, err := req.DoRaw()
@@ -42,8 +40,6 @@ func (i *influxdbs) List(opts metav1.ListOptions) (runtime.Object, error) {
 }
 
 func (i *influxdbs) Get(name string, opts metav1.GetOptions) (*unstructured.Unstructured, error) {
-	log.Printf("Get: %s %v", name, opts)
-
 	cur, err := i.client.Get(name, opts)
 
 	if err != nil {
@@ -74,7 +70,9 @@ func (i *influxdbs) Watch(opts metav1.ListOptions) (watch.Interface, error) {
 	r, err := i.restClient.Get().
 		Prefix("watch").
 		Namespace("default").
-		Resource(i.crdKind.Plural).
+		Resource("influxdbs").
+		//TODO: crdKind is not populated
+		//Resource(i.crdKind.Plural).
 		Stream()
 	if err != nil {
 		return nil, err
@@ -144,9 +142,16 @@ type influxdbDecoder struct {
 }
 
 func (j *influxdbDecoder) Decode() (action watch.EventType, object runtime.Object, err error) {
-	panic("not implemented")
+	var e struct {
+		Type   watch.EventType
+		Object Influxdb
+	}
+	if err := j.dec.Decode(&e); err != nil {
+		return watch.Error, nil, err
+	}
+	return e.Type, &e.Object, nil
 }
 
 func (j *influxdbDecoder) Close() {
-	panic("not implemented")
+	j.close()
 }

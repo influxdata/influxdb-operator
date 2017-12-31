@@ -191,7 +191,6 @@ func (operator *Operator) Run(stopCh <-chan struct{}, wg *sync.WaitGroup) {
 		if _, err := crdClient.Create(crd); err != nil && !apierrors.IsAlreadyExists(err) {
 			panic(err)
 		}
-		log.Printf("CRD created %s", crd.Spec.Names.Kind)
 	}
 
 	go operator.tickInf.Run(stopCh)
