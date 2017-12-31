@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-var options operator.Options
+var options operator.Config
 
 func init() {
 	pflag.StringVar(&options.KubeConfig, "kubeconfig", "", "Path to kubeconfig file with authorization and master location information.")
