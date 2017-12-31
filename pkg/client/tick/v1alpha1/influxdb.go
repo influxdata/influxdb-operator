@@ -27,7 +27,7 @@ type influxdbs struct {
 }
 
 func (i *influxdbs) List(opts metav1.ListOptions) (runtime.Object, error) {
-	req := i.restClient.Get().Namespace("default").Resource(InfluxDBPlural)
+	req := i.restClient.Get().Namespace(i.namespace).Resource(InfluxDBPlural)
 
 	buf, err := req.DoRaw()
 
@@ -69,7 +69,7 @@ func (i *influxdbs) Update(obj *unstructured.Unstructured) (*unstructured.Unstru
 func (i *influxdbs) Watch(opts metav1.ListOptions) (watch.Interface, error) {
 	r, err := i.restClient.Get().
 		Prefix("watch").
-		Namespace("default").
+		Namespace(i.namespace).
 		Resource("influxdbs").
 		//TODO: crdKind is not populated
 		//Resource(i.crdKind.Plural).

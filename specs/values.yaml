@@ -3,12 +3,8 @@ kind: influxdb
 
 metadata:
   name: monitor
+  namespace: default
 
 spec:
   baseImage: "docker.io/influxdb:1.4.0"
 
-  # kapacitor:
-  #   image: "kapacitor:1.4.0"
-  #
-  # chronograf:
-  #   image: "chronograf:1.3.0"

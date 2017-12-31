@@ -1,7 +1,6 @@
 package operator
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"sync"
@@ -54,8 +53,11 @@ func (o *Operator) handleDeleteInfluxDB(obj interface{}) {
 		return
 	}
 
+	orphanDependents := false
 	deploymentName := fmt.Sprintf("%s-%s", v1alpha1.InfluxDBPlural, oret.GetName())
-	err := o.kubeClient.ExtensionsV1beta1().Deployments("default").Delete(deploymentName, &metav1.DeleteOptions{})
+	err := o.kubeClient.ExtensionsV1beta1().Deployments(oret.GetNamespace()).Delete(deploymentName, &metav1.DeleteOptions{
+		OrphanDependents: &orphanDependents, //TODO(fntlnz): orphan dependents is now deprecated, support the new way too!
+	})
 	if err != nil {
 		log.Printf("Error deleting deployment %s. %s", deploymentName, err)
 	}
@@ -69,15 +71,7 @@ func (o *Operator) handleAddInfluxDB(obj interface{}) {
 		return
 	}
 
-	//TODO: There is a costant in some place
-	lastApplied := oret.GetAnnotations()["kubectl.kubernetes.io/last-applied-configuration"]
-
-	println(oret.GetName())
-	var influxdbSpec v1alpha1.Influxdb
-	err := json.Unmarshal([]byte(lastApplied), &influxdbSpec)
-	if err != nil {
-		panic(err)
-	}
+	influxdbSpec := obj.(*v1alpha1.Influxdb)
 
 	labels := o.config.Labels
 	labels["name"] = fmt.Sprintf("%s-%s", v1alpha1.InfluxDBPlural, oret.GetName())
@@ -86,14 +80,16 @@ func (o *Operator) handleAddInfluxDB(obj interface{}) {
 	replicas := int32(1)
 	deployment := &v1beta1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   labels["name"],
-			Labels: labels,
+			Name:      labels["name"],
+			Labels:    labels,
+			Namespace: oret.GetNamespace(),
 		},
 		Spec: v1beta1.DeploymentSpec{
 			Replicas: &replicas,
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
+					Labels:    labels,
+					Namespace: oret.GetNamespace(),
 				},
 				Spec: v1.PodSpec{
 					Containers: []v1.Container{
@@ -119,8 +115,8 @@ func (o *Operator) handleAddInfluxDB(obj interface{}) {
 		},
 	}
 
-	_, err = o.kubeClient.AppsV1beta1().Deployments("default").Create(deployment)
-	fmt.Print(err)
+	_, err := o.kubeClient.AppsV1beta1().Deployments(oret.GetNamespace()).Create(deployment)
+	fmt.Print(err) //TODO: handle in a different way?
 }
 
 func New(options Config) *Operator {
