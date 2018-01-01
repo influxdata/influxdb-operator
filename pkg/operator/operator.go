@@ -54,10 +54,10 @@ func (o *Operator) handleDeleteInfluxDB(obj interface{}) {
 		return
 	}
 
-	orphanDependents := false
 	deploymentName := fmt.Sprintf("%s-%s", v1alpha1.InfluxDBPlural, oret.GetName())
+	policy := metav1.DeletePropagationForeground
 	err := o.kubeClient.ExtensionsV1beta1().Deployments(oret.GetNamespace()).Delete(deploymentName, &metav1.DeleteOptions{
-		OrphanDependents: &orphanDependents, //TODO(fntlnz): orphan dependents is now deprecated, support the new way too!
+		PropagationPolicy: &policy,
 	})
 	if err != nil {
 		log.Printf("Error deleting deployment %s. %s", deploymentName, err)
@@ -129,10 +129,10 @@ func (o *Operator) handleDeleteKapacitor(obj interface{}) {
 		return
 	}
 
-	orphanDependents := false
 	deploymentName := fmt.Sprintf("%s-%s", v1alpha1.KapacitorPlural, oret.GetName())
+	policy := metav1.DeletePropagationForeground
 	err := o.kubeClient.ExtensionsV1beta1().Deployments(oret.GetNamespace()).Delete(deploymentName, &metav1.DeleteOptions{
-		OrphanDependents: &orphanDependents, //TODO(fntlnz): orphan dependents is now deprecated, support the new way too!
+		PropagationPolicy: &policy,
 	})
 	if err != nil {
 		log.Printf("Error deleting deployment %s. %s", deploymentName, err)
