@@ -103,39 +103,6 @@ func newInfluxdbs(r rest.Interface, c *dynamic.Client, namespace string) *influx
 	}
 }
 
-func UnstructuredFromInfluxDB(p *Influxdb) (*unstructured.Unstructured, error) {
-	p.TypeMeta.Kind = InfluxDBKind
-	// TODO: Naaah It's not right.
-	p.TypeMeta.APIVersion = InfluxDBApiVersion
-	b, err := json.Marshal(p)
-	if err != nil {
-		return nil, err
-	}
-	var r unstructured.Unstructured
-	if err := json.Unmarshal(b, &r.Object); err != nil {
-		return nil, err
-	}
-	return &r, nil
-}
-
-func InfluxDBFromUnstructured(r *unstructured.Unstructured) (*Influxdb, error) {
-	b, err := json.Marshal(r.Object)
-	if err != nil {
-		return nil, err
-	}
-
-	var i Influxdb
-	if err := json.Unmarshal(b, &i); err != nil {
-		return nil, err
-	}
-
-	i.TypeMeta.Kind = InfluxDBKind
-	i.TypeMeta.APIVersion = InfluxDBApiVersion
-
-	return &i, nil
-
-}
-
 type influxdbDecoder struct {
 	dec   *json.Decoder
 	close func() error

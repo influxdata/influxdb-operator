@@ -1,10 +1,16 @@
 apiVersion: "gianarb.com/v1alpha1"
 kind: influxdb
-
 metadata:
   name: monitor
   namespace: default
-
 spec:
   baseImage: "docker.io/influxdb:1.4.0"
 
+---
+apiVersion: "gianarb.com/v1alpha1"
+kind: kapacitor
+metadata:
+  name: monitor
+  namespace: default
+spec:
+  baseImage: "docker.io/kapacitor:1.4.0"
