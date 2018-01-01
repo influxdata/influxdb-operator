@@ -21,12 +21,13 @@ type Config struct {
 }
 
 type Operator struct {
-	config            Config
-	kubeClient        *kubernetes.Clientset
-	tickCs            v1alpha1.TickV1alpha1Client
-	clientSet         clientset.Interface
-	influxInformer    cache.SharedIndexInformer
-	kapacitorInformer cache.SharedIndexInformer
+	config             Config
+	kubeClient         *kubernetes.Clientset
+	tickCs             v1alpha1.TickV1alpha1Client
+	clientSet          clientset.Interface
+	influxInformer     cache.SharedIndexInformer
+	kapacitorInformer  cache.SharedIndexInformer
+	chronografInformer cache.SharedIndexInformer
 }
 
 func (o *Operator) getObject(obj interface{}) (metav1.Object, bool) {
@@ -71,6 +72,7 @@ func New(options Config) *Operator {
 
 	registerInfluxInformer(operator)
 	registerKapacitorInformer(operator)
+	registerChronografInformer(operator)
 	return operator
 }
 
@@ -107,9 +109,26 @@ func (operator *Operator) Run(stopCh <-chan struct{}, wg *sync.WaitGroup) {
 		},
 	}
 
+	chronografCrd := extensionsobj.CustomResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "chronografs" + "." + "gianarb.com",
+			Labels: map[string]string{},
+		},
+		Spec: extensionsobj.CustomResourceDefinitionSpec{
+			Group:   "gianarb.com",
+			Version: "v1alpha1",
+			Scope:   extensionsobj.NamespaceScoped,
+			Names: extensionsobj.CustomResourceDefinitionNames{
+				Plural: "chronografs",
+				Kind:   "chronograf",
+			},
+		},
+	}
+
 	crds := []*extensionsobj.CustomResourceDefinition{
 		&influxCrd,
 		&kapacitorCrd,
+		&chronografCrd,
 	}
 	crdClient := operator.clientSet.ApiextensionsV1beta1().CustomResourceDefinitions()
 	for _, crd := range crds {
@@ -120,4 +139,5 @@ func (operator *Operator) Run(stopCh <-chan struct{}, wg *sync.WaitGroup) {
 
 	go operator.kapacitorInformer.Run(stopCh)
 	go operator.influxInformer.Run(stopCh)
+	go operator.chronografInformer.Run(stopCh)
 }
