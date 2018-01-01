@@ -85,3 +85,43 @@ func (i *KapacitorSpec) GetObjectKind() schema.ObjectKind {
 func (i *KapacitorSpec) DeepCopyObject() runtime.Object {
 	panic("not implemented")
 }
+
+type Chronograf struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Spec              ChronografSpec `json:"spec"`
+}
+
+func (i *Chronograf) GetObjectKind() schema.ObjectKind {
+	panic("not implemented")
+}
+
+func (i *Chronograf) DeepCopyObject() runtime.Object {
+	panic("not implemented")
+}
+
+type ChronografList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []*Chronograf `json:"items"`
+}
+
+func (i *ChronografList) GetObjectKind() schema.ObjectKind {
+	panic("not implemented")
+}
+
+func (i *ChronografList) DeepCopyObject() runtime.Object {
+	panic("not implemented")
+}
+
+type ChronografSpec struct {
+	BaseImage string `json:"baseImage,omitempty"`
+}
+
+func (i *ChronografSpec) GetObjectKind() schema.ObjectKind {
+	panic("not implemented")
+}
+
+func (i *ChronografSpec) DeepCopyObject() runtime.Object {
+	panic("not implemented")
+}
