@@ -36,6 +36,15 @@ func (i *InfluxdbList) DeepCopyObject() runtime.Object {
 
 type InfluxdbSpec struct {
 	BaseImage string `json:"baseImage,omitempty"`
+	// Number of desired pods. This is a pointer to distinguish between explicit
+	// zero and not specified. Defaults to 1.
+	// +optional
+	Replicas *int32 `json:"replicas,omitempty" protobuf:"varint,1,opt,name=replicas"`
+
+	// Label selector for pods. Existing ReplicaSets whose pods are
+	// selected by this will be the ones affected by this deployment.
+	// It must match the pod template's labels.
+	Selector *metav1.LabelSelector `json:"selector" protobuf:"bytes,2,opt,name=selector"`
 }
 
 func (i *InfluxdbSpec) GetObjectKind() schema.ObjectKind {
@@ -76,6 +85,15 @@ func (i *KapacitorList) DeepCopyObject() runtime.Object {
 
 type KapacitorSpec struct {
 	BaseImage string `json:"baseImage,omitempty"`
+	// Number of desired pods. This is a pointer to distinguish between explicit
+	// zero and not specified. Defaults to 1.
+	// +optional
+	Replicas *int32 `json:"replicas,omitempty" protobuf:"varint,1,opt,name=replicas"`
+
+	// Label selector for pods. Existing ReplicaSets whose pods are
+	// selected by this will be the ones affected by this deployment.
+	// It must match the pod template's labels.
+	Selector *metav1.LabelSelector `json:"selector" protobuf:"bytes,2,opt,name=selector"`
 }
 
 func (i *KapacitorSpec) GetObjectKind() schema.ObjectKind {
@@ -116,6 +134,15 @@ func (i *ChronografList) DeepCopyObject() runtime.Object {
 
 type ChronografSpec struct {
 	BaseImage string `json:"baseImage,omitempty"`
+	// Number of desired pods. This is a pointer to distinguish between explicit
+	// zero and not specified. Defaults to 1.
+	// +optional
+	Replicas *int32 `json:"replicas,omitempty" protobuf:"varint,1,opt,name=replicas"`
+
+	// Label selector for pods. Existing ReplicaSets whose pods are
+	// selected by this will be the ones affected by this deployment.
+	// It must match the pod template's labels.
+	Selector *metav1.LabelSelector `json:"selector" protobuf:"bytes,2,opt,name=selector"`
 }
 
 func (i *ChronografSpec) GetObjectKind() schema.ObjectKind {

@@ -3,9 +3,11 @@ kind: influxdb
 metadata:
   name: monitor
   namespace: default
+  labels:
+    app: influxdb
 spec:
   baseImage: "docker.io/influxdb:1.4.0"
-
+  replicas: 1
 ---
 apiVersion: "gianarb.com/v1alpha1"
 kind: kapacitor
@@ -14,7 +16,6 @@ metadata:
   namespace: default
 spec:
   baseImage: "docker.io/kapacitor:1.4.0"
-
 ---
 apiVersion: "gianarb.com/v1alpha1"
 kind: chronograf
