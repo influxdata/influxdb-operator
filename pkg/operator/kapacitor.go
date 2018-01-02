@@ -90,7 +90,7 @@ func (o *Operator) handleAddKapacitor(obj interface{}) {
 						v1.Container{
 							Name:            oret.GetName(),
 							Image:           kapacitorSpec.Spec.BaseImage,
-							ImagePullPolicy: "Always",
+							ImagePullPolicy: kapacitorSpec.Spec.ImagePullPolicy,
 							Env:             []v1.EnvVar{},
 							Ports: []v1.ContainerPort{
 								v1.ContainerPort{

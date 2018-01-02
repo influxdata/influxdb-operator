@@ -114,7 +114,7 @@ func (o *Operator) handleAddInfluxDB(obj interface{}) {
 						v1.Container{
 							Name:            oret.GetName(),
 							Image:           influxdbSpec.Spec.BaseImage,
-							ImagePullPolicy: "Always",
+							ImagePullPolicy: influxdbSpec.Spec.ImagePullPolicy,
 							Env:             []v1.EnvVar{},
 							Ports: []v1.ContainerPort{
 								v1.ContainerPort{
