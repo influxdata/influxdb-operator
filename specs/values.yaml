@@ -8,6 +8,7 @@ metadata:
 spec:
   baseImage: "docker.io/influxdb:1.4.0"
   replicas: 1
+  imagePullPolicy: Always
 ---
 apiVersion: "gianarb.com/v1alpha1"
 kind: kapacitor
@@ -16,6 +17,7 @@ metadata:
   namespace: default
 spec:
   baseImage: "docker.io/kapacitor:1.4.0"
+  imagePullPolicy: IfNotPresent
 ---
 apiVersion: "gianarb.com/v1alpha1"
 kind: chronograf

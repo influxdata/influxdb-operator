@@ -91,7 +91,7 @@ func (o *Operator) handleAddChronograf(obj interface{}) {
 						v1.Container{
 							Name:            oret.GetName(),
 							Image:           chronografSpec.Spec.BaseImage,
-							ImagePullPolicy: "Always",
+							ImagePullPolicy: chronografSpec.Spec.ImagePullPolicy,
 							Env:             []v1.EnvVar{},
 							Ports: []v1.ContainerPort{
 								v1.ContainerPort{
