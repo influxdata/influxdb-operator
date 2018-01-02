@@ -5,9 +5,11 @@ import (
 	"log"
 
 	"github.com/gianarb/influxdb-operator/pkg/client/tick/v1alpha1"
+	"github.com/gianarb/influxdb-operator/pkg/k8sutil"
 	"k8s.io/api/apps/v1beta1"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -43,6 +45,12 @@ func (o *Operator) handleDeleteKapacitor(obj interface{}) {
 	if err != nil {
 		log.Printf("Error deleting deployment %s. %s", deploymentName, err)
 	}
+
+	err = k8sutil.DeleteServices(o.kubeClient.CoreV1().Services(oret.GetNamespace()), deploymentName)
+
+	if err != nil {
+		log.Printf("Error deleting deployment service: %s. %s", deploymentName, err)
+	}
 }
 
 func (o *Operator) handleAddKapacitor(obj interface{}) {
@@ -59,7 +67,8 @@ func (o *Operator) handleAddKapacitor(obj interface{}) {
 	for k, v := range kapacitorSpec.GetLabels() {
 		labels[k] = v
 	}
-	labels["name"] = fmt.Sprintf("%s-%s", v1alpha1.KapacitorKind, oret.GetName())
+	choosenName := fmt.Sprintf("%s-%s", v1alpha1.KapacitorKind, oret.GetName())
+	labels["name"] = choosenName
 	labels["resource"] = v1alpha1.KapacitorKind
 
 	deployment := &v1beta1.Deployment{
@@ -101,5 +110,37 @@ func (o *Operator) handleAddKapacitor(obj interface{}) {
 	}
 
 	_, err := o.kubeClient.AppsV1beta1().Deployments(oret.GetNamespace()).Create(deployment)
-	fmt.Print(err) //TODO: handle in a different way?
+	if err != nil {
+		log.Print(err)
+	}
+
+	svc := makeKapacitorService(choosenName, o.config)
+	err = k8sutil.CreateService(o.kubeClient.CoreV1().Services(oret.GetNamespace()), svc)
+
+	if err != nil {
+		log.Print(err)
+	}
+}
+
+func makeKapacitorService(name string, config Config) *v1.Service {
+	return &v1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            name,
+			Labels:          config.Labels,
+			OwnerReferences: nil,
+		},
+		Spec: v1.ServiceSpec{
+			Ports: []v1.ServicePort{
+				{
+					Name:       "kapacitor",
+					Port:       9092,
+					TargetPort: intstr.FromInt(9092),
+					Protocol:   v1.ProtocolTCP,
+				},
+			},
+			Selector: map[string]string{
+				"name": name,
+			},
+		},
+	}
 }
