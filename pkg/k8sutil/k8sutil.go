@@ -39,3 +39,7 @@ func CreateConfigMap(client clientv1.ConfigMapInterface, cm *v1.ConfigMap) error
 
 	return nil
 }
+
+func DeleteConfigMap(client clientv1.ConfigMapInterface, cm string) error {
+	return client.Delete(cm, &meta_v1.DeleteOptions{})
+}

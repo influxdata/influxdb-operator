@@ -54,6 +54,11 @@ func (o *Operator) handleDeleteInfluxDB(obj interface{}) {
 	if err != nil {
 		log.Printf("Error deleting deployment service: %s. %s", deploymentName, err)
 	}
+
+	err = k8sutil.DeleteConfigMap(o.kubeClient.CoreV1().ConfigMaps(oret.GetNamespace()), deploymentName)
+	if err != nil {
+		log.Printf("Error deleting config map: %s. %s", deploymentName, err)
+	}
 }
 
 func (o *Operator) handleAddInfluxDB(obj interface{}) {
@@ -184,6 +189,9 @@ func makeInfluxDBService(name string, config Config) *v1.Service {
 
 func createInfluxDBConfiguration(spec v1alpha1.InfluxdbSpec) *run.Config {
 	config := run.NewConfig()
+	config.Meta.Dir = "/var/lib/influxdb/meta"
+	config.Data.Dir = "/var/lib/influxdb/data"
+	config.Data.WALDir = "/var/lib/influxdb/wal"
 	return config
 }
 
