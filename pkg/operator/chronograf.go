@@ -5,9 +5,11 @@ import (
 	"log"
 
 	"github.com/gianarb/influxdb-operator/pkg/client/tick/v1alpha1"
+	"github.com/gianarb/influxdb-operator/pkg/k8sutil"
 	"k8s.io/api/apps/v1beta1"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -59,7 +61,8 @@ func (o *Operator) handleAddChronograf(obj interface{}) {
 	for k, v := range chronografSpec.GetLabels() {
 		labels[k] = v
 	}
-	labels["name"] = fmt.Sprintf("%s-%s", v1alpha1.ChronografKind, oret.GetName())
+	choosenName := fmt.Sprintf("%s-%s", v1alpha1.ChronografKind, oret.GetName())
+	labels["name"] = choosenName
 	labels["resource"] = v1alpha1.ChronografKind
 
 	deployment := &v1beta1.Deployment{
@@ -101,5 +104,39 @@ func (o *Operator) handleAddChronograf(obj interface{}) {
 	}
 
 	_, err := o.kubeClient.AppsV1beta1().Deployments(oret.GetNamespace()).Create(deployment)
-	fmt.Print(err) //TODO: handle in a different way?
+
+	if err != nil {
+		log.Print(err)
+	}
+
+	svc := makeChronografService(choosenName, o.config)
+	_, err = k8sutil.CreateService(o.kubeClient.CoreV1().Services(oret.GetNamespace()), svc)
+
+	if err != nil {
+		log.Print(err)
+	}
+
+}
+
+func makeChronografService(name string, config Config) *v1.Service {
+	return &v1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            name,
+			Labels:          config.Labels,
+			OwnerReferences: nil,
+		},
+		Spec: v1.ServiceSpec{
+			Ports: []v1.ServicePort{
+				{
+					Name:       "ui",
+					Port:       8888,
+					TargetPort: intstr.FromInt(8888),
+					Protocol:   v1.ProtocolTCP,
+				},
+			},
+			Selector: map[string]string{
+				"name": name,
+			},
+		},
+	}
 }
