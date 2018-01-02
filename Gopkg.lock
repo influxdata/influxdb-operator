@@ -2,6 +2,22 @@
 
 
 [[projects]]
+  name = "collectd.org"
+  packages = [
+    "api",
+    "cdtime",
+    "network"
+  ]
+  revision = "2ce144541b8903101fb8f1483cc0497a68798122"
+  version = "v0.3.0"
+
+[[projects]]
+  name = "github.com/BurntSushi/toml"
+  packages = ["."]
+  revision = "b26d9c308763d68093482582cea63d69be07a0f0"
+  version = "v0.3.0"
+
+[[projects]]
   name = "github.com/PuerkitoBio/purell"
   packages = ["."]
   revision = "0bcb03f4b4d0a9428594752bd2a3b9aa0a9d4bd4"
@@ -14,10 +30,46 @@
   revision = "de5bf2ad457846296e2031421a34e2568e304e35"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/beorn7/perks"
+  packages = ["quantile"]
+  revision = "4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/bmizerany/pat"
+  packages = ["."]
+  revision = "6226ea591a40176dd3ff9cd8eff81ed6ca721a00"
+
+[[projects]]
+  name = "github.com/cespare/xxhash"
+  packages = ["."]
+  revision = "5c37fe3735342a2e0d01c87a907579987c8936cc"
+  version = "v1.0.0"
+
+[[projects]]
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
   version = "v1.1.0"
+
+[[projects]]
+  name = "github.com/dgrijalva/jwt-go"
+  packages = ["."]
+  revision = "dbeaa9332f19a944acb5736b4456cfcc02140e29"
+  version = "v3.1.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/dgryski/go-bits"
+  packages = ["."]
+  revision = "2ad8d707cc05b1815ce6ff2543bb5e8d8f9298ef"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/dgryski/go-bitstream"
+  packages = ["."]
+  revision = "7d46cd22db7004f0cceb6f7975824b560cf0e486"
 
 [[projects]]
   name = "github.com/emicklei/go-restful"
@@ -61,8 +113,12 @@
 [[projects]]
   name = "github.com/gogo/protobuf"
   packages = [
+    "codec",
+    "gogoproto",
     "proto",
-    "sortkeys"
+    "protoc-gen-gogo/descriptor",
+    "sortkeys",
+    "types"
   ]
   revision = "342cbe0a04158f6dcb03ca0079991a51a4248c02"
   version = "v0.5"
@@ -84,6 +140,12 @@
     "ptypes/timestamp"
   ]
   revision = "1e59b77b52bf8e4b449a57e6f79f21226d571845"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/golang/snappy"
+  packages = ["."]
+  revision = "553a641470496b2327abcac10b36396bd98e45c9"
 
 [[projects]]
   branch = "master"
@@ -138,6 +200,98 @@
   version = "0.2.4"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/influxdata/influxdb"
+  packages = [
+    ".",
+    "client/v2",
+    "cmd/influxd/run",
+    "coordinator",
+    "logger",
+    "models",
+    "monitor",
+    "monitor/diagnostics",
+    "pkg/bits",
+    "pkg/bloom",
+    "pkg/bytesutil",
+    "pkg/escape",
+    "pkg/estimator",
+    "pkg/estimator/hll",
+    "pkg/file",
+    "pkg/limiter",
+    "pkg/metrics",
+    "pkg/mmap",
+    "pkg/pool",
+    "pkg/rhh",
+    "pkg/slices",
+    "pkg/tracing",
+    "pkg/tracing/fields",
+    "pkg/tracing/labels",
+    "pkg/tracing/wire",
+    "prometheus",
+    "prometheus/remote",
+    "query",
+    "query/internal",
+    "query/neldermead",
+    "services/collectd",
+    "services/continuous_querier",
+    "services/graphite",
+    "services/httpd",
+    "services/meta",
+    "services/meta/internal",
+    "services/opentsdb",
+    "services/precreator",
+    "services/retention",
+    "services/snapshotter",
+    "services/storage",
+    "services/subscriber",
+    "services/udp",
+    "tcp",
+    "toml",
+    "tsdb",
+    "tsdb/engine",
+    "tsdb/engine/tsm1",
+    "tsdb/index",
+    "tsdb/index/inmem",
+    "tsdb/index/tsi1",
+    "tsdb/internal",
+    "uuid"
+  ]
+  revision = "80f1120c3e25ebe8b42f8010173758ef7ba779c9"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/influxdata/influxql"
+  packages = [
+    ".",
+    "internal"
+  ]
+  revision = "851636b092678c9816f183ca8267a490c19be163"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/influxdata/usage-client"
+  packages = ["v1"]
+  revision = "6d3895376368aa52a3a81d2a16e90f0f52371967"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/influxdata/yamux"
+  packages = ["."]
+  revision = "1f58ded512de5feabbe30b60c7d33a7a896c5f16"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/influxdata/yarpc"
+  packages = [
+    ".",
+    "codes",
+    "status",
+    "yarpcproto"
+  ]
+  revision = "036268cdec22b7074cd6d50cc6d7315c667063c7"
+
+[[projects]]
   name = "github.com/json-iterator/go"
   packages = ["."]
   revision = "f7279a603edee96fe7764d3de9c6ff8cf9970994"
@@ -151,6 +305,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/jwilder/encoding"
+  packages = ["simple8b"]
+  revision = "b4e1701a28efcc637d9afcca7d38e495fe909a09"
+
+[[projects]]
+  branch = "master"
   name = "github.com/mailru/easyjson"
   packages = [
     "buffer",
@@ -158,6 +318,22 @@
     "jwriter"
   ]
   revision = "32fa128f234d041f196a9f3e0fea5ac9772c08e1"
+
+[[projects]]
+  name = "github.com/matttproud/golang_protobuf_extensions"
+  packages = ["pbutil"]
+  revision = "3247c84500bff8d9fb6d579d800f20b3e091582c"
+  version = "v1.0.0"
+
+[[projects]]
+  name = "github.com/opentracing/opentracing-go"
+  packages = [
+    ".",
+    "ext",
+    "log"
+  ]
+  revision = "1949ddbfd147afd4d964a9f00b24eb291e0e7c38"
+  version = "v1.0.2"
 
 [[projects]]
   branch = "master"
@@ -172,15 +348,96 @@
   version = "v2.0.1"
 
 [[projects]]
+  name = "github.com/philhofer/fwd"
+  packages = ["."]
+  revision = "bb6d471dc95d4fe11e432687f8b70ff496cf3136"
+  version = "v1.0.0"
+
+[[projects]]
+  name = "github.com/prometheus/client_golang"
+  packages = [
+    "prometheus",
+    "prometheus/promhttp"
+  ]
+  revision = "c5b7fccd204277076155f10851dad72b76a49317"
+  version = "v0.8.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/prometheus/client_model"
+  packages = ["go"]
+  revision = "99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/prometheus/common"
+  packages = [
+    "expfmt",
+    "internal/bitbucket.org/ww/goautoneg",
+    "model"
+  ]
+  revision = "2e54d0b93cba2fd133edc32211dcc32c06ef72ca"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/prometheus/procfs"
+  packages = [
+    ".",
+    "xfs"
+  ]
+  revision = "b15cd069a83443be3154b719d0cc9fe8117f09fb"
+
+[[projects]]
   name = "github.com/spf13/pflag"
   packages = ["."]
   revision = "e57e3eeb33f795204c1ca35f56c44f83227c6e66"
   version = "v1.0.0"
 
 [[projects]]
+  name = "github.com/tinylib/msgp"
+  packages = ["msgp"]
+  revision = "b2b6a672cf1e5b90748f79b8b81fc8c5cf0571a1"
+  version = "1.0.2"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/xlab/treeprint"
+  packages = ["."]
+  revision = "06dfc6fa17cdde904617990a0c2d89e3e332dbb3"
+
+[[projects]]
+  name = "go.uber.org/atomic"
+  packages = ["."]
+  revision = "8474b86a5a6f79c443ce4b2992817ff32cf208b8"
+  version = "v1.3.1"
+
+[[projects]]
+  name = "go.uber.org/multierr"
+  packages = ["."]
+  revision = "3c4937480c32f4c13a875a1829af76c98ca3d40a"
+  version = "v1.1.0"
+
+[[projects]]
+  branch = "master"
+  name = "go.uber.org/zap"
+  packages = [
+    ".",
+    "buffer",
+    "internal/bufferpool",
+    "internal/color",
+    "internal/exit",
+    "zapcore"
+  ]
+  revision = "f85c78b1dd998214c5f2138155b320a4a43fbe36"
+
+[[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
-  packages = ["ssh/terminal"]
+  packages = [
+    "bcrypt",
+    "blowfish",
+    "ssh/terminal"
+  ]
   revision = "d585fd2cc9195196078f516b69daff6744ef5e84"
 
 [[projects]]
@@ -210,12 +467,18 @@
   packages = [
     "collate",
     "collate/build",
+    "encoding",
+    "encoding/internal",
+    "encoding/internal/identifier",
+    "encoding/unicode",
     "internal/colltab",
     "internal/gen",
     "internal/tag",
     "internal/triegen",
     "internal/ucd",
+    "internal/utf8internal",
     "language",
+    "runes",
     "secure/bidirule",
     "transform",
     "unicode/bidi",
@@ -225,6 +488,12 @@
     "width"
   ]
   revision = "eb22672bea55af56d225d4e35405f4d2e9f062a0"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/time"
+  packages = ["rate"]
+  revision = "6dc17368e09b0e8634d71cac8168d853e869a0c7"
 
 [[projects]]
   name = "gopkg.in/inf.v0"
@@ -396,6 +665,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "7307c0f4cfa8164fae83485d786da6f5ed04074b68211aca49a129dd8f5dc1ed"
+  inputs-digest = "7f3e42363fe737a2857bc463058fde87cf7e9baa4513eaa06b32d38429d34fa5"
   solver-name = "gps-cdcl"
   solver-version = 1
