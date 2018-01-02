@@ -35,7 +35,7 @@ func (o *Operator) handleDeleteKapacitor(obj interface{}) {
 		return
 	}
 
-	deploymentName := fmt.Sprintf("%s-%s", v1alpha1.KapacitorPlural, oret.GetName())
+	deploymentName := fmt.Sprintf("%s-%s", v1alpha1.KapacitorKind, oret.GetName())
 	policy := metav1.DeletePropagationForeground
 	err := o.kubeClient.ExtensionsV1beta1().Deployments(oret.GetNamespace()).Delete(deploymentName, &metav1.DeleteOptions{
 		PropagationPolicy: &policy,
@@ -56,10 +56,12 @@ func (o *Operator) handleAddKapacitor(obj interface{}) {
 	kapacitorSpec := obj.(*v1alpha1.Kapacitor)
 
 	labels := o.config.Labels
-	labels["name"] = fmt.Sprintf("%s-%s", v1alpha1.KapacitorPlural, oret.GetName())
-	labels["resource"] = v1alpha1.KapacitorPlural
+	for k, v := range kapacitorSpec.GetLabels() {
+		labels[k] = v
+	}
+	labels["name"] = fmt.Sprintf("%s-%s", v1alpha1.KapacitorKind, oret.GetName())
+	labels["resource"] = v1alpha1.KapacitorKind
 
-	replicas := int32(1)
 	deployment := &v1beta1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      labels["name"],
@@ -67,7 +69,8 @@ func (o *Operator) handleAddKapacitor(obj interface{}) {
 			Namespace: oret.GetNamespace(),
 		},
 		Spec: v1beta1.DeploymentSpec{
-			Replicas: &replicas,
+			Selector: kapacitorSpec.Spec.Selector,
+			Replicas: kapacitorSpec.Spec.Replicas,
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:    labels,
