@@ -117,7 +117,7 @@ func (o *Operator) handleAddChronograf(obj interface{}) {
 	}
 
 	svc := makeChronografService(choosenName, o.config)
-	_, err = k8sutil.CreateService(o.kubeClient.CoreV1().Services(oret.GetNamespace()), svc)
+	err = k8sutil.CreateService(o.kubeClient.CoreV1().Services(oret.GetNamespace()), svc)
 
 	if err != nil {
 		log.Print(err)
