@@ -45,6 +45,13 @@ func (o *Operator) handleDeleteChronograf(obj interface{}) {
 	if err != nil {
 		log.Printf("Error deleting deployment %s. %s", deploymentName, err)
 	}
+
+	err = k8sutil.DeleteServices(o.kubeClient.CoreV1().Services(oret.GetNamespace()), deploymentName)
+
+	if err != nil {
+		log.Printf("Error deleting deployment service: %s. %s", deploymentName, err)
+	}
+
 }
 
 func (o *Operator) handleAddChronograf(obj interface{}) {
