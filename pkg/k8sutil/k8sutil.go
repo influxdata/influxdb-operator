@@ -17,7 +17,7 @@ func CreateService(client clientv1.ServiceInterface, service *v1.Service) error 
 	}
 
 	if err != nil {
-		return fmt.Errorf("creating service failed: %s", err)
+		return fmt.Errorf("creating service failed: %s", err.Error())
 	}
 
 	return nil
@@ -25,4 +25,17 @@ func CreateService(client clientv1.ServiceInterface, service *v1.Service) error 
 
 func DeleteServices(client clientv1.ServiceInterface, serviceName string) error {
 	return client.Delete(serviceName, &meta_v1.DeleteOptions{})
+}
+
+func CreateConfigMap(client clientv1.ConfigMapInterface, cm *v1.ConfigMap) error {
+	_, err := client.Create(cm)
+	if apierrors.IsAlreadyExists(err) {
+		return nil
+	}
+
+	if err != nil {
+		return fmt.Errorf("creating config map failed: %s", err.Error())
+	}
+
+	return nil
 }

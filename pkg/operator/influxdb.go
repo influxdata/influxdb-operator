@@ -1,11 +1,14 @@
 package operator
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 
+	"github.com/BurntSushi/toml"
 	"github.com/gianarb/influxdb-operator/pkg/client/tick/v1alpha1"
 	"github.com/gianarb/influxdb-operator/pkg/k8sutil"
+	"github.com/influxdata/influxdb/cmd/influxd/run"
 	"k8s.io/api/apps/v1beta1"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -72,6 +75,21 @@ func (o *Operator) handleAddInfluxDB(obj interface{}) {
 	labels["name"] = choosenName
 	labels["resource"] = v1alpha1.InfluxDBKind
 
+	config := createInfluxDBConfiguration(influxdbSpec.Spec)
+	cm, err := makeInfluxDBConfigMap(choosenName, config)
+
+	if err != nil {
+		log.Print(err)
+		return
+	}
+
+	err = k8sutil.CreateConfigMap(o.kubeClient.Core().ConfigMaps(oret.GetNamespace()), cm)
+
+	if err != nil {
+		log.Print(err)
+		return
+	}
+
 	deployment := &v1beta1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      labels["name"],
@@ -100,17 +118,34 @@ func (o *Operator) handleAddInfluxDB(obj interface{}) {
 									Protocol:      v1.ProtocolTCP,
 								},
 							},
-							//VolumeMounts: []v1.VolumeMount{},
+							VolumeMounts: []v1.VolumeMount{
+								{
+									Name:      "influxdb-config",
+									SubPath:   "config.toml",
+									MountPath: "/etc/influxdb/influxdb.conf",
+								},
+							},
 							//Resources:    v1.ResourceRequirements{},
 						},
 					},
-					//Volumes: []v1.Volume{},
+					Volumes: []v1.Volume{
+						{
+							Name: "influxdb-config",
+							VolumeSource: v1.VolumeSource{
+								ConfigMap: &v1.ConfigMapVolumeSource{
+									LocalObjectReference: v1.LocalObjectReference{
+										Name: choosenName,
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
 	}
 
-	_, err := o.kubeClient.AppsV1beta1().Deployments(oret.GetNamespace()).Create(deployment)
+	_, err = o.kubeClient.AppsV1beta1().Deployments(oret.GetNamespace()).Create(deployment)
 	if err != nil {
 		log.Print(err)
 	}
@@ -120,6 +155,7 @@ func (o *Operator) handleAddInfluxDB(obj interface{}) {
 
 	if err != nil {
 		log.Print(err)
+		return
 	}
 }
 
@@ -144,4 +180,27 @@ func makeInfluxDBService(name string, config Config) *v1.Service {
 			},
 		},
 	}
+}
+
+func createInfluxDBConfiguration(spec v1alpha1.InfluxdbSpec) *run.Config {
+	config := run.NewConfig()
+	return config
+}
+
+func makeInfluxDBConfigMap(name string, config *run.Config) (*v1.ConfigMap, error) {
+	buf := new(bytes.Buffer)
+	if err := toml.NewEncoder(buf).Encode(&config); err != nil {
+		return nil, err
+	}
+
+	data := map[string]string{
+		"config.toml": buf.String(),
+	}
+
+	return &v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Data: data,
+	}, nil
 }
