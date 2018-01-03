@@ -8,7 +8,6 @@ import (
 	extensionsobj "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -28,20 +27,6 @@ type Operator struct {
 	influxInformer     cache.SharedIndexInformer
 	kapacitorInformer  cache.SharedIndexInformer
 	chronografInformer cache.SharedIndexInformer
-}
-
-func (o *Operator) getObject(obj interface{}) (metav1.Object, bool) {
-	ts, ok := obj.(cache.DeletedFinalStateUnknown)
-	if ok {
-		obj = ts.Obj
-	}
-
-	oret, err := meta.Accessor(obj)
-	if err != nil {
-		log.Print(err)
-		return nil, false
-	}
-	return oret, true
 }
 
 func New(options Config) *Operator {

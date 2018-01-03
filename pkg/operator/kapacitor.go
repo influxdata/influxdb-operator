@@ -30,92 +30,62 @@ func registerKapacitorInformer(operator *Operator) {
 }
 
 func (o *Operator) handleDeleteKapacitor(obj interface{}) {
-	oret, ok := o.getObject(obj)
+	spec := obj.(*v1alpha1.Kapacitor)
 
-	if !ok {
-		//TODO: error? panic? how?
-		return
-	}
-
-	deploymentName := fmt.Sprintf("%s-%s", v1alpha1.KapacitorKind, oret.GetName())
+	deploymentName := fmt.Sprintf("%s-%s", v1alpha1.KapacitorKind, spec.GetName())
 	policy := metav1.DeletePropagationForeground
-	err := o.kubeClient.ExtensionsV1beta1().Deployments(oret.GetNamespace()).Delete(deploymentName, &metav1.DeleteOptions{
+	err := o.kubeClient.ExtensionsV1beta1().Deployments(spec.GetNamespace()).Delete(deploymentName, &metav1.DeleteOptions{
 		PropagationPolicy: &policy,
 	})
 	if err != nil {
 		log.Printf("Error deleting deployment %s. %s", deploymentName, err)
 	}
 
-	err = k8sutil.DeleteServices(o.kubeClient.CoreV1().Services(oret.GetNamespace()), deploymentName)
+	err = k8sutil.DeleteServices(o.kubeClient.CoreV1().Services(spec.GetNamespace()), deploymentName)
 
 	if err != nil {
 		log.Printf("Error deleting deployment service: %s. %s", deploymentName, err)
 	}
 }
 
-func (o *Operator) handleAddKapacitor(obj interface{}) {
-	oret, ok := o.getObject(obj)
-
-	if !ok {
-		//TODO: error? panic? how?
-		return
-	}
-
-	kapacitorSpec := obj.(*v1alpha1.Kapacitor)
-
-	labels := o.config.Labels
-	for k, v := range kapacitorSpec.GetLabels() {
+func makeKapacitorDeployment(deploymentName string, spec *v1alpha1.Kapacitor) *v1beta1.Deployment {
+	labels := map[string]string{}
+	for k, v := range spec.GetLabels() {
 		labels[k] = v
 	}
-	choosenName := fmt.Sprintf("%s-%s", v1alpha1.KapacitorKind, oret.GetName())
-	labels["name"] = choosenName
+	labels["name"] = deploymentName
 	labels["resource"] = v1alpha1.KapacitorKind
-
-	deployment := &v1beta1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      labels["name"],
-			Labels:    labels,
-			Namespace: oret.GetNamespace(),
-		},
-		Spec: v1beta1.DeploymentSpec{
-			Selector: kapacitorSpec.Spec.Selector,
-			Replicas: kapacitorSpec.Spec.Replicas,
-			Template: v1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels:    labels,
-					Namespace: oret.GetNamespace(),
-				},
-				Spec: v1.PodSpec{
-					Containers: []v1.Container{
-						v1.Container{
-							Name:            oret.GetName(),
-							Image:           kapacitorSpec.Spec.BaseImage,
-							ImagePullPolicy: kapacitorSpec.Spec.ImagePullPolicy,
-							Env:             []v1.EnvVar{},
-							Ports: []v1.ContainerPort{
-								v1.ContainerPort{
-									Name:          "http",
-									ContainerPort: 9092,
-									Protocol:      v1.ProtocolTCP,
-								},
-							},
-							//VolumeMounts: []v1.VolumeMount{},
-							//Resources:    v1.ResourceRequirements{},
-						},
-					},
-					//Volumes: []v1.Volume{},
-				},
+	i := k8sutil.DeploymentInput{
+		Name:            labels["name"],
+		Image:           spec.Spec.BaseImage,
+		ImagePullPolicy: spec.Spec.ImagePullPolicy,
+		Labels:          labels,
+		Selector:        spec.Spec.Selector,
+		Replicas:        spec.Spec.Replicas,
+		Namespace:       spec.GetNamespace(),
+		Ports: []v1.ContainerPort{
+			v1.ContainerPort{
+				Name:          "http",
+				ContainerPort: 9092,
+				Protocol:      v1.ProtocolTCP,
 			},
 		},
 	}
+	return k8sutil.NewDeployment(i)
+}
 
-	err := k8sutil.CreateDeployment(o.kubeClient.AppsV1beta1().Deployments(oret.GetNamespace()), deployment)
+func (o *Operator) handleAddKapacitor(obj interface{}) {
+	spec := obj.(*v1alpha1.Kapacitor)
+
+	choosenName := fmt.Sprintf("%s-%s", v1alpha1.KapacitorKind, spec.GetName())
+	deployment := makeKapacitorDeployment(choosenName, spec)
+	err := k8sutil.CreateDeployment(o.kubeClient.AppsV1beta1().Deployments(spec.GetNamespace()), deployment)
 	if err != nil {
 		log.Print(err)
 	}
 
 	svc := makeKapacitorService(choosenName, o.config)
-	err = k8sutil.CreateService(o.kubeClient.CoreV1().Services(oret.GetNamespace()), svc)
+	err = k8sutil.CreateService(o.kubeClient.CoreV1().Services(spec.GetNamespace()), svc)
 
 	if err != nil {
 		log.Print(err)
