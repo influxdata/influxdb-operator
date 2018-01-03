@@ -24,6 +24,8 @@ kind: chronograf
 metadata:
   name: monitor
   namespace: default
+  labels:
+    foo: bar
 spec:
   baseImage: "docker.io/chronograf:1.3"
 ---

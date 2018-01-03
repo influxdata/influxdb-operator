@@ -33,53 +33,78 @@ func registerInfluxInformer(operator *Operator) {
 }
 
 func (o *Operator) handleDeleteInfluxDB(obj interface{}) {
-	oret, ok := o.getObject(obj)
-
-	if !ok {
-		//TODO: error? panic? how?
-		return
-	}
-
-	deploymentName := fmt.Sprintf("%s-%s", v1alpha1.InfluxDBKind, oret.GetName())
+	spec := obj.(*v1alpha1.Influxdb)
+	deploymentName := fmt.Sprintf("%s-%s", v1alpha1.InfluxDBKind, spec.GetName())
 	policy := metav1.DeletePropagationForeground
-	err := o.kubeClient.ExtensionsV1beta1().Deployments(oret.GetNamespace()).Delete(deploymentName, &metav1.DeleteOptions{
+	err := o.kubeClient.ExtensionsV1beta1().Deployments(spec.GetNamespace()).Delete(deploymentName, &metav1.DeleteOptions{
 		PropagationPolicy: &policy,
 	})
 	if err != nil {
 		log.Printf("Error deleting deployment %s. %s", deploymentName, err)
 	}
 
-	err = k8sutil.DeleteServices(o.kubeClient.CoreV1().Services(oret.GetNamespace()), deploymentName)
+	err = k8sutil.DeleteServices(o.kubeClient.CoreV1().Services(spec.GetNamespace()), deploymentName)
 
 	if err != nil {
 		log.Printf("Error deleting deployment service: %s. %s", deploymentName, err)
 	}
 
-	err = k8sutil.DeleteConfigMap(o.kubeClient.CoreV1().ConfigMaps(oret.GetNamespace()), deploymentName)
+	err = k8sutil.DeleteConfigMap(o.kubeClient.CoreV1().ConfigMaps(spec.GetNamespace()), deploymentName)
 	if err != nil {
 		log.Printf("Error deleting config map: %s. %s", deploymentName, err)
 	}
 }
 
-func (o *Operator) handleAddInfluxDB(obj interface{}) {
-	oret, ok := o.getObject(obj)
-
-	if !ok {
-		//TODO: error? panic? how?
-		return
-	}
-
-	influxdbSpec := obj.(*v1alpha1.Influxdb)
-
-	labels := o.config.Labels
+func makeInfluxDBDeployment(deploymentName string, influxdbSpec *v1alpha1.Influxdb) *v1beta1.Deployment {
+	labels := map[string]string{}
 	for k, v := range influxdbSpec.GetLabels() {
 		labels[k] = v
 	}
 
-	choosenName := fmt.Sprintf("%s-%s", v1alpha1.InfluxDBKind, oret.GetName())
-	labels["name"] = choosenName
+	labels["name"] = deploymentName
 	labels["resource"] = v1alpha1.InfluxDBKind
+	i := k8sutil.DeploymentInput{
+		Name:            labels["name"],
+		Image:           influxdbSpec.Spec.BaseImage,
+		ImagePullPolicy: influxdbSpec.Spec.ImagePullPolicy,
+		Labels:          labels,
+		Selector:        influxdbSpec.Spec.Selector,
+		Replicas:        influxdbSpec.Spec.Replicas,
+		Namespace:       influxdbSpec.GetNamespace(),
+		Ports: []v1.ContainerPort{
+			v1.ContainerPort{
+				Name:          "http",
+				ContainerPort: 8086,
+				Protocol:      v1.ProtocolTCP,
+			},
+		},
+		VolumeMounts: []v1.VolumeMount{
+			{
+				Name:      "influxdb-config",
+				SubPath:   "config.toml",
+				MountPath: "/etc/influxdb/influxdb.conf",
+			},
+		},
+		Volumes: []v1.Volume{
+			{
+				Name: "influxdb-config",
+				VolumeSource: v1.VolumeSource{
+					ConfigMap: &v1.ConfigMapVolumeSource{
+						LocalObjectReference: v1.LocalObjectReference{
+							Name: deploymentName,
+						},
+					},
+				},
+			},
+		},
+	}
+	return k8sutil.NewDeployment(i)
+}
 
+func (o *Operator) handleAddInfluxDB(obj interface{}) {
+	influxdbSpec := obj.(*v1alpha1.Influxdb)
+
+	choosenName := fmt.Sprintf("%s-%s", v1alpha1.InfluxDBKind, influxdbSpec.GetName())
 	config := createInfluxDBConfiguration(influxdbSpec.Spec)
 	cm, err := makeInfluxDBConfigMap(choosenName, config)
 
@@ -88,75 +113,21 @@ func (o *Operator) handleAddInfluxDB(obj interface{}) {
 		return
 	}
 
-	err = k8sutil.CreateConfigMap(o.kubeClient.Core().ConfigMaps(oret.GetNamespace()), cm)
+	err = k8sutil.CreateConfigMap(o.kubeClient.Core().ConfigMaps(influxdbSpec.GetNamespace()), cm)
 
 	if err != nil {
 		log.Print(err)
 		return
 	}
 
-	deployment := &v1beta1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      labels["name"],
-			Labels:    labels,
-			Namespace: oret.GetNamespace(),
-		},
-		Spec: v1beta1.DeploymentSpec{
-			Selector: influxdbSpec.Spec.Selector,
-			Replicas: influxdbSpec.Spec.Replicas,
-			Template: v1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels:    labels,
-					Namespace: oret.GetNamespace(),
-				},
-				Spec: v1.PodSpec{
-					Containers: []v1.Container{
-						v1.Container{
-							Name:            oret.GetName(),
-							Image:           influxdbSpec.Spec.BaseImage,
-							ImagePullPolicy: influxdbSpec.Spec.ImagePullPolicy,
-							Env:             []v1.EnvVar{},
-							Ports: []v1.ContainerPort{
-								v1.ContainerPort{
-									Name:          "http",
-									ContainerPort: 8086,
-									Protocol:      v1.ProtocolTCP,
-								},
-							},
-							VolumeMounts: []v1.VolumeMount{
-								{
-									Name:      "influxdb-config",
-									SubPath:   "config.toml",
-									MountPath: "/etc/influxdb/influxdb.conf",
-								},
-							},
-							//Resources:    v1.ResourceRequirements{},
-						},
-					},
-					Volumes: []v1.Volume{
-						{
-							Name: "influxdb-config",
-							VolumeSource: v1.VolumeSource{
-								ConfigMap: &v1.ConfigMapVolumeSource{
-									LocalObjectReference: v1.LocalObjectReference{
-										Name: choosenName,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	_, err = o.kubeClient.AppsV1beta1().Deployments(oret.GetNamespace()).Create(deployment)
+	deployment := makeInfluxDBDeployment(choosenName, influxdbSpec)
+	err = k8sutil.CreateDeployment(o.kubeClient.AppsV1beta1().Deployments(influxdbSpec.GetNamespace()), deployment)
 	if err != nil {
 		log.Print(err)
 	}
 
 	svc := makeInfluxDBService(choosenName, o.config)
-	err = k8sutil.CreateService(o.kubeClient.CoreV1().Services(oret.GetNamespace()), svc)
+	err = k8sutil.CreateService(o.kubeClient.CoreV1().Services(influxdbSpec.GetNamespace()), svc)
 
 	if err != nil {
 		log.Print(err)

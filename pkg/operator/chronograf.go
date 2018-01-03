@@ -30,23 +30,17 @@ func registerChronografInformer(operator *Operator) {
 }
 
 func (o *Operator) handleDeleteChronograf(obj interface{}) {
-	oret, ok := o.getObject(obj)
-
-	if !ok {
-		//TODO: error? panic? how?
-		return
-	}
-
-	deploymentName := fmt.Sprintf("%s-%s", v1alpha1.ChronografKind, oret.GetName())
+	spec := obj.(*v1alpha1.Chronograf)
+	deploymentName := fmt.Sprintf("%s-%s", v1alpha1.ChronografKind, spec.GetName())
 	policy := metav1.DeletePropagationForeground
-	err := o.kubeClient.ExtensionsV1beta1().Deployments(oret.GetNamespace()).Delete(deploymentName, &metav1.DeleteOptions{
+	err := o.kubeClient.ExtensionsV1beta1().Deployments(spec.GetNamespace()).Delete(deploymentName, &metav1.DeleteOptions{
 		PropagationPolicy: &policy,
 	})
 	if err != nil {
 		log.Printf("Error deleting deployment %s. %s", deploymentName, err)
 	}
 
-	err = k8sutil.DeleteServices(o.kubeClient.CoreV1().Services(oret.GetNamespace()), deploymentName)
+	err = k8sutil.DeleteServices(o.kubeClient.CoreV1().Services(spec.GetNamespace()), deploymentName)
 
 	if err != nil {
 		log.Printf("Error deleting deployment service: %s. %s", deploymentName, err)
@@ -54,70 +48,48 @@ func (o *Operator) handleDeleteChronograf(obj interface{}) {
 
 }
 
-func (o *Operator) handleAddChronograf(obj interface{}) {
-	oret, ok := o.getObject(obj)
-
-	if !ok {
-		//TODO: error? panic? how?
-		return
-	}
-
-	chronografSpec := obj.(*v1alpha1.Chronograf)
-
-	labels := o.config.Labels
-	for k, v := range chronografSpec.GetLabels() {
+func makeChronografDeployment(deploymentName string, spec *v1alpha1.Chronograf) *v1beta1.Deployment {
+	labels := map[string]string{}
+	for k, v := range spec.GetLabels() {
 		labels[k] = v
 	}
-	choosenName := fmt.Sprintf("%s-%s", v1alpha1.ChronografKind, oret.GetName())
-	labels["name"] = choosenName
+	labels["name"] = deploymentName
 	labels["resource"] = v1alpha1.ChronografKind
 
-	deployment := &v1beta1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      labels["name"],
-			Labels:    labels,
-			Namespace: oret.GetNamespace(),
-		},
-		Spec: v1beta1.DeploymentSpec{
-			Selector: chronografSpec.Spec.Selector,
-			Replicas: chronografSpec.Spec.Replicas,
-			Template: v1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels:    labels,
-					Namespace: oret.GetNamespace(),
-				},
-				Spec: v1.PodSpec{
-					Containers: []v1.Container{
-						v1.Container{
-							Name:            oret.GetName(),
-							Image:           chronografSpec.Spec.BaseImage,
-							ImagePullPolicy: chronografSpec.Spec.ImagePullPolicy,
-							Env:             []v1.EnvVar{},
-							Ports: []v1.ContainerPort{
-								v1.ContainerPort{
-									Name:          "http",
-									ContainerPort: 8888,
-									Protocol:      v1.ProtocolTCP,
-								},
-							},
-							//VolumeMounts: []v1.VolumeMount{},
-							//Resources:    v1.ResourceRequirements{},
-						},
-					},
-					//Volumes: []v1.Volume{},
-				},
+	i := k8sutil.DeploymentInput{
+		Name:            labels["name"],
+		Image:           spec.Spec.BaseImage,
+		ImagePullPolicy: spec.Spec.ImagePullPolicy,
+		Labels:          labels,
+		Selector:        spec.Spec.Selector,
+		Replicas:        spec.Spec.Replicas,
+		Namespace:       spec.GetNamespace(),
+		Ports: []v1.ContainerPort{
+			v1.ContainerPort{
+				Name:          "http",
+				ContainerPort: 8888,
+				Protocol:      v1.ProtocolTCP,
 			},
 		},
 	}
+	return k8sutil.NewDeployment(i)
+}
 
-	_, err := o.kubeClient.AppsV1beta1().Deployments(oret.GetNamespace()).Create(deployment)
+func (o *Operator) handleAddChronograf(obj interface{}) {
+	chronografSpec := obj.(*v1alpha1.Chronograf)
+	choosenName := fmt.Sprintf("%s-%s", v1alpha1.ChronografKind, chronografSpec.GetName())
 
+	deployment := makeChronografDeployment(choosenName, chronografSpec)
+	err := k8sutil.CreateDeployment(o.kubeClient.AppsV1beta1().Deployments(chronografSpec.GetNamespace()), deployment)
 	if err != nil {
 		log.Print(err)
 	}
 
 	svc := makeChronografService(choosenName, o.config)
-	err = k8sutil.CreateService(o.kubeClient.CoreV1().Services(oret.GetNamespace()), svc)
+	if err != nil {
+		log.Print(err)
+	}
+	err = k8sutil.CreateService(o.kubeClient.CoreV1().Services(chronografSpec.GetNamespace()), svc)
 
 	if err != nil {
 		log.Print(err)
