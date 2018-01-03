@@ -54,6 +54,33 @@ func (o *Operator) handleDeleteChronograf(obj interface{}) {
 
 }
 
+func makeChronografDeployment(oret metav1.Object, deploymentName string, spec *v1alpha1.Chronograf) *v1beta1.Deployment {
+	labels := oret.GetLabels()
+	for k, v := range spec.GetLabels() {
+		labels[k] = v
+	}
+	labels["name"] = deploymentName
+	labels["resource"] = v1alpha1.ChronografKind
+
+	i := k8sutil.DeploymentInput{
+		Name:            labels["name"],
+		Image:           spec.Spec.BaseImage,
+		ImagePullPolicy: spec.Spec.ImagePullPolicy,
+		Labels:          labels,
+		Selector:        spec.Spec.Selector,
+		Replicas:        spec.Spec.Replicas,
+		Namespace:       oret.GetNamespace(),
+		Ports: []v1.ContainerPort{
+			v1.ContainerPort{
+				Name:          "http",
+				ContainerPort: 8888,
+				Protocol:      v1.ProtocolTCP,
+			},
+		},
+	}
+	return k8sutil.NewDeployment(i)
+}
+
 func (o *Operator) handleAddChronograf(obj interface{}) {
 	oret, ok := o.getObject(obj)
 
@@ -61,55 +88,10 @@ func (o *Operator) handleAddChronograf(obj interface{}) {
 		//TODO: error? panic? how?
 		return
 	}
-
 	chronografSpec := obj.(*v1alpha1.Chronograf)
-
-	labels := o.config.Labels
-	for k, v := range chronografSpec.GetLabels() {
-		labels[k] = v
-	}
 	choosenName := fmt.Sprintf("%s-%s", v1alpha1.ChronografKind, oret.GetName())
-	labels["name"] = choosenName
-	labels["resource"] = v1alpha1.ChronografKind
 
-	deployment := &v1beta1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      labels["name"],
-			Labels:    labels,
-			Namespace: oret.GetNamespace(),
-		},
-		Spec: v1beta1.DeploymentSpec{
-			Selector: chronografSpec.Spec.Selector,
-			Replicas: chronografSpec.Spec.Replicas,
-			Template: v1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels:    labels,
-					Namespace: oret.GetNamespace(),
-				},
-				Spec: v1.PodSpec{
-					Containers: []v1.Container{
-						v1.Container{
-							Name:            oret.GetName(),
-							Image:           chronografSpec.Spec.BaseImage,
-							ImagePullPolicy: chronografSpec.Spec.ImagePullPolicy,
-							Env:             []v1.EnvVar{},
-							Ports: []v1.ContainerPort{
-								v1.ContainerPort{
-									Name:          "http",
-									ContainerPort: 8888,
-									Protocol:      v1.ProtocolTCP,
-								},
-							},
-							//VolumeMounts: []v1.VolumeMount{},
-							//Resources:    v1.ResourceRequirements{},
-						},
-					},
-					//Volumes: []v1.Volume{},
-				},
-			},
-		},
-	}
-
+	deployment := makeChronografDeployment(oret, choosenName, chronografSpec)
 	err := k8sutil.CreateDeployment(o.kubeClient.AppsV1beta1().Deployments(oret.GetNamespace()), deployment)
 	if err != nil {
 		log.Print(err)
