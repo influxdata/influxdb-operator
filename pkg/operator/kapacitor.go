@@ -109,7 +109,7 @@ func (o *Operator) handleAddKapacitor(obj interface{}) {
 		},
 	}
 
-	_, err := o.kubeClient.AppsV1beta1().Deployments(oret.GetNamespace()).Create(deployment)
+	err := k8sutil.CreateDeployment(o.kubeClient.AppsV1beta1().Deployments(oret.GetNamespace()), deployment)
 	if err != nil {
 		log.Print(err)
 	}
