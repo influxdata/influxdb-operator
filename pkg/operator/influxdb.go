@@ -114,7 +114,6 @@ func (o *Operator) handleAddInfluxDB(obj interface{}) {
 	}
 
 	err = k8sutil.CreateConfigMap(o.kubeClient.Core().ConfigMaps(influxdbSpec.GetNamespace()), cm)
-
 	if err != nil {
 		log.Print(err)
 		return
@@ -124,6 +123,7 @@ func (o *Operator) handleAddInfluxDB(obj interface{}) {
 	err = k8sutil.CreateDeployment(o.kubeClient.AppsV1beta1().Deployments(influxdbSpec.GetNamespace()), deployment)
 	if err != nil {
 		log.Print(err)
+		return
 	}
 
 	svc := makeInfluxDBService(choosenName, o.config)

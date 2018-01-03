@@ -1,11 +1,14 @@
 package operator
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 
+	"github.com/BurntSushi/toml"
 	"github.com/gianarb/influxdb-operator/pkg/client/tick/v1alpha1"
 	"github.com/gianarb/influxdb-operator/pkg/k8sutil"
+	"github.com/influxdata/kapacitor/server"
 	"k8s.io/api/apps/v1beta1"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,6 +32,11 @@ func registerKapacitorInformer(operator *Operator) {
 	})
 }
 
+func createKapacitorConfiguration(spec *v1alpha1.Kapacitor) *server.Config {
+	config, _ := server.NewDemoConfig()
+	return config
+}
+
 func (o *Operator) handleDeleteKapacitor(obj interface{}) {
 	spec := obj.(*v1alpha1.Kapacitor)
 
@@ -42,9 +50,13 @@ func (o *Operator) handleDeleteKapacitor(obj interface{}) {
 	}
 
 	err = k8sutil.DeleteServices(o.kubeClient.CoreV1().Services(spec.GetNamespace()), deploymentName)
-
 	if err != nil {
 		log.Printf("Error deleting deployment service: %s. %s", deploymentName, err)
+	}
+
+	err = k8sutil.DeleteConfigMap(o.kubeClient.CoreV1().ConfigMaps(spec.GetNamespace()), deploymentName)
+	if err != nil {
+		log.Printf("Error deleting config map: %s. %s", deploymentName, err)
 	}
 }
 
@@ -70,18 +82,69 @@ func makeKapacitorDeployment(deploymentName string, spec *v1alpha1.Kapacitor) *v
 				Protocol:      v1.ProtocolTCP,
 			},
 		},
+		VolumeMounts: []v1.VolumeMount{
+			{
+				Name:      "kapacitor-config",
+				SubPath:   "config.toml",
+				MountPath: "/etc/influxdb/influxdb.conf",
+			},
+		},
+		Volumes: []v1.Volume{
+			{
+				Name: "kapacitor-config",
+				VolumeSource: v1.VolumeSource{
+					ConfigMap: &v1.ConfigMapVolumeSource{
+						LocalObjectReference: v1.LocalObjectReference{
+							Name: deploymentName,
+						},
+					},
+				},
+			},
+		},
 	}
 	return k8sutil.NewDeployment(i)
+}
+
+func makeKapacitorConfigMap(name string, config *server.Config) (*v1.ConfigMap, error) {
+	buf := new(bytes.Buffer)
+	if err := toml.NewEncoder(buf).Encode(&config); err != nil {
+		return nil, err
+	}
+
+	data := map[string]string{
+		"config.toml": buf.String(),
+	}
+
+	return &v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Data: data,
+	}, nil
 }
 
 func (o *Operator) handleAddKapacitor(obj interface{}) {
 	spec := obj.(*v1alpha1.Kapacitor)
 
 	choosenName := fmt.Sprintf("%s-%s", v1alpha1.KapacitorKind, spec.GetName())
-	deployment := makeKapacitorDeployment(choosenName, spec)
-	err := k8sutil.CreateDeployment(o.kubeClient.AppsV1beta1().Deployments(spec.GetNamespace()), deployment)
+
+	kapacitorConfig := createKapacitorConfiguration(spec)
+	cm, err := makeKapacitorConfigMap(choosenName, kapacitorConfig)
 	if err != nil {
 		log.Print(err)
+		return
+	}
+	err = k8sutil.CreateConfigMap(o.kubeClient.Core().ConfigMaps(spec.GetNamespace()), cm)
+	if err != nil {
+		log.Print(err)
+		return
+	}
+
+	deployment := makeKapacitorDeployment(choosenName, spec)
+	err = k8sutil.CreateDeployment(o.kubeClient.AppsV1beta1().Deployments(spec.GetNamespace()), deployment)
+	if err != nil {
+		log.Print(err)
+		return
 	}
 
 	svc := makeKapacitorService(choosenName, o.config)
@@ -89,6 +152,7 @@ func (o *Operator) handleAddKapacitor(obj interface{}) {
 
 	if err != nil {
 		log.Print(err)
+		return
 	}
 }
 
