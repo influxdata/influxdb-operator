@@ -196,6 +196,9 @@ type ChronografSpec struct {
 	// 720h). Authentication expires on browser close if --auth-duration is set to
 	// 0.
 	AuthDuration string `json:"auth_duration"`
+
+	// Set the logging level (default: info, accepted: debug|info|error)
+	LogLevel string `json:"log_level"`
 }
 
 type ChronografSource struct {

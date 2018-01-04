@@ -76,6 +76,10 @@ func makeChronografDeployment(deploymentName string, spec *v1alpha1.Chronograf) 
 			Value: spec.Spec.AuthDuration,
 			Name:  "AUTH_DURATION",
 		},
+		{
+			Value: spec.Spec.LogLevel,
+			Name:  "LOG_LEVEL",
+		},
 	}
 
 	i := k8sutil.DeploymentInput{
@@ -113,6 +117,10 @@ func setDefaultSpecValues(spec *v1alpha1.Chronograf) {
 	}
 	if spec.Spec.AuthDuration == "" {
 		spec.Spec.AuthDuration = "720h"
+	}
+
+	if spec.Spec.LogLevel == "" {
+		spec.Spec.AuthDuration = "info"
 	}
 }
 
