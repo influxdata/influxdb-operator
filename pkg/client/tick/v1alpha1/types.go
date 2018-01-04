@@ -165,6 +165,47 @@ type ChronografSpec struct {
 	// selected by this will be the ones affected by this deployment.
 	// It must match the pod template's labels.
 	Selector *metav1.LabelSelector `json:"selector" protobuf:"bytes,2,opt,name=selector"`
+
+	// The IP that chronograf listens on (default: 0.0.0.0)
+	Host string `json:"host"`
+
+	// The port that chronograf listens on for insecure connections (default: 8888).
+	Port int32 `json:"port"`
+
+	// The file path to PEM encoded public key certificate.
+	Cert string `json:"cert"`
+
+	// Run the chronograf server in develop mode.
+	Develop bool `json:"develop"`
+
+	// The file path to the boltDB file (default: /var/lib/chronograf/chronograf-v1-.db).
+	BoltPath string `json:"bolt_path"`
+
+	// The file path to private key associated with given certificate.
+	Key             string           `json:"key"`
+	InfuxDBSource   ChronografSource `json:"influxdb_source"`
+	KapacitorSource ChronografSource `json:"kapacitor_source"`
+
+	// The path to the directory for pre-created dashboards (default: /usr/share/chronograf/canned).
+	CannedPath string `json:"canned_path"`
+
+	// The secret for signing tokens.
+	TokenSecret string `json:"token_secret"`
+
+	// The total duration (in hours) of cookie life for authentication (default:
+	// 720h). Authentication expires on browser close if --auth-duration is set to
+	// 0.
+	AuthDuration string `json:"auth_duration"`
+}
+
+type ChronografSource struct {
+	// The location of your InfluxDB instance including http://, the IP address, and port.
+	// Example: http:///0.0.0.0:8086.
+	Url string `json:"url"`
+	// The username for your InfluxDB instance.
+	Username string `json:"username"`
+	// The password for your InfluxDB instance.
+	Password string `json:"password"`
 }
 
 func (i *ChronografSpec) GetObjectKind() schema.ObjectKind {

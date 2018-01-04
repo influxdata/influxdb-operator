@@ -69,6 +69,7 @@ type DeploymentInput struct {
 	VolumeMounts    []v1.VolumeMount
 	Resources       v1.ResourceRequirements
 	Volumes         []v1.Volume
+	Envs            []v1.EnvVar
 }
 
 func NewDeployment(i DeploymentInput) *v1beta1.Deployment {
@@ -92,7 +93,7 @@ func NewDeployment(i DeploymentInput) *v1beta1.Deployment {
 							Name:            i.Name,
 							Image:           i.Image,
 							ImagePullPolicy: i.ImagePullPolicy,
-							Env:             []v1.EnvVar{},
+							Env:             i.Envs,
 							Ports:           i.Ports,
 							VolumeMounts:    i.VolumeMounts,
 							Resources:       i.Resources,

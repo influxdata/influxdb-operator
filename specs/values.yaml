@@ -43,4 +43,3 @@ spec:
               serviceName: chronograf-monitor
               servicePort: 8888
             path: /
-

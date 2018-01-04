@@ -55,6 +55,28 @@ func makeChronografDeployment(deploymentName string, spec *v1alpha1.Chronograf) 
 	}
 	labels["name"] = deploymentName
 	labels["resource"] = v1alpha1.ChronografKind
+	envs := []v1.EnvVar{
+		{
+			Value: fmt.Sprint(spec.Spec.Port),
+			Name:  "PORT",
+		},
+		{
+			Value: spec.Spec.Host,
+			Name:  "HOST",
+		},
+		{
+			Value: spec.Spec.BoltPath,
+			Name:  "BOLT_PATH",
+		},
+		{
+			Value: spec.Spec.CannedPath,
+			Name:  "CANNED_PATH",
+		},
+		{
+			Value: spec.Spec.AuthDuration,
+			Name:  "AUTH_DURATION",
+		},
+	}
 
 	i := k8sutil.DeploymentInput{
 		Name:            labels["name"],
@@ -63,11 +85,12 @@ func makeChronografDeployment(deploymentName string, spec *v1alpha1.Chronograf) 
 		Labels:          labels,
 		Selector:        spec.Spec.Selector,
 		Replicas:        spec.Spec.Replicas,
+		Envs:            envs,
 		Namespace:       spec.GetNamespace(),
 		Ports: []v1.ContainerPort{
 			v1.ContainerPort{
 				Name:          "http",
-				ContainerPort: 8888,
+				ContainerPort: spec.Spec.Port,
 				Protocol:      v1.ProtocolTCP,
 			},
 		},
@@ -75,8 +98,27 @@ func makeChronografDeployment(deploymentName string, spec *v1alpha1.Chronograf) 
 	return k8sutil.NewDeployment(i)
 }
 
+func setDefaultSpecValues(spec *v1alpha1.Chronograf) {
+	if spec.Spec.Host == "" {
+		spec.Spec.Host = "0.0.0.0"
+	}
+	if spec.Spec.Port == 0 {
+		spec.Spec.Port = 8888
+	}
+	if spec.Spec.BoltPath == "" {
+		spec.Spec.BoltPath = "/var/lib/chronograf/chronograf-v1-.db"
+	}
+	if spec.Spec.CannedPath == "" {
+		spec.Spec.CannedPath = "/usr/share/chronograf/canned"
+	}
+	if spec.Spec.AuthDuration == "" {
+		spec.Spec.AuthDuration = "720h"
+	}
+}
+
 func (o *Operator) handleAddChronograf(obj interface{}) {
 	chronografSpec := obj.(*v1alpha1.Chronograf)
+	setDefaultSpecValues(chronografSpec)
 	choosenName := fmt.Sprintf("%s-%s", v1alpha1.ChronografKind, chronografSpec.GetName())
 
 	deployment := makeChronografDeployment(choosenName, chronografSpec)
@@ -85,7 +127,7 @@ func (o *Operator) handleAddChronograf(obj interface{}) {
 		log.Print(err)
 	}
 
-	svc := makeChronografService(choosenName, o.config)
+	svc := makeChronografService(choosenName, o.config, chronografSpec)
 	if err != nil {
 		log.Print(err)
 	}
@@ -97,7 +139,7 @@ func (o *Operator) handleAddChronograf(obj interface{}) {
 
 }
 
-func makeChronografService(name string, config Config) *v1.Service {
+func makeChronografService(name string, config Config, spec *v1alpha1.Chronograf) *v1.Service {
 	return &v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            name,
@@ -108,8 +150,8 @@ func makeChronografService(name string, config Config) *v1.Service {
 			Ports: []v1.ServicePort{
 				{
 					Name:       "ui",
-					Port:       8888,
-					TargetPort: intstr.FromInt(8888),
+					Port:       spec.Spec.Port,
+					TargetPort: intstr.FromInt(int(spec.Spec.Port)),
 					Protocol:   v1.ProtocolTCP,
 				},
 			},
