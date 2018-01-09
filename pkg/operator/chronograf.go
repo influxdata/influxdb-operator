@@ -82,6 +82,13 @@ func makeChronografDeployment(deploymentName string, spec *v1alpha1.Chronograf) 
 		},
 	}
 
+	if spec.Spec.InfuxDBSource.Url != "" {
+		envs = append(envs, v1.EnvVar{
+			Value: spec.Spec.InfuxDBSource.Url,
+			Name:  "INFLUXDB_URL",
+		})
+	}
+
 	i := k8sutil.DeploymentInput{
 		Name:            labels["name"],
 		Image:           spec.Spec.BaseImage,
