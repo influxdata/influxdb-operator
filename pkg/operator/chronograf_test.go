@@ -18,6 +18,25 @@ func TestDefaultValuesForChronografSpec(t *testing.T) {
 	}
 }
 
+func TestDeploymentWithInfluxDBSourceUrl(t *testing.T) {
+	spec := &v1alpha1.Chronograf{}
+	setDefaultSpecValues(spec)
+	spec.Spec.InfuxDBSource = v1alpha1.ChronografSource{
+		Url: "http://influxdb:8086",
+	}
+	deployment := makeChronografDeployment("hello", spec)
+	envs := deployment.Spec.Template.Spec.Containers[0].Env
+	var url string
+	for _, env := range envs {
+		if env.Name == "INFLUXDB_URL" {
+			url = env.Value
+		}
+	}
+	if url != "http://influxdb:8086" {
+		t.Error("Expected env var INFLUXDB_URL with value http://influxdb:8086 insted value is `%s`", url)
+	}
+}
+
 func TestDefaultValuesForChronografSpecPrePopulated(t *testing.T) {
 	spec := &v1alpha1.Chronograf{}
 	spec.Spec.Port = 9088
