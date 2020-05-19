@@ -1,0 +1,21 @@
+apiVersion: influxdb.influxdata.com/v1
+kind: InfluxDB
+metadata:
+  name: influxdb-sample
+spec:
+  provision: false
+  url: http://localhost:9999
+  organization: 05a7fa0ea69e4000
+  token:
+    secretName: influxdb
+    secretKey:  admin-token
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: influxdb
+type: Opaque
+data:
+  # base64 decoded value is `influxdb`
+  admin-token: aW5mbHV4ZGI=
+  admin-password: aW5mbHV4ZGI=

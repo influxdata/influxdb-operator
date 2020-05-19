@@ -1,0 +1,7 @@
+apiVersion: influxdb.influxdata.com/v1
+kind: Token
+metadata:
+  name: token-sample
+spec:
+  influxdb: influxdb-sample
+  secret: mytoken

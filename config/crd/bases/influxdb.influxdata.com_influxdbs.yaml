@@ -1,0 +1,139 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.2.5
+  creationTimestamp: null
+  name: influxdbs.influxdb.influxdata.com
+spec:
+  group: influxdb.influxdata.com
+  names:
+    kind: InfluxDB
+    listKind: InfluxDBList
+    plural: influxdbs
+    singular: influxdb
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.url
+      name: URL
+      type: string
+    - jsonPath: .spec.organization
+      name: Organization
+      type: string
+    - jsonPath: .status.available
+      name: Available
+      type: boolean
+    - jsonPath: .status.authenticated
+      name: Authenticated
+      type: boolean
+    - jsonPath: .status.dnsResolutionDuration
+      name: DNS Resolution (ms)
+      priority: 10
+      type: integer
+    - jsonPath: .status.connectTime
+      name: HTTP Connect (ms)
+      priority: 10
+      type: integer
+    - jsonPath: .status.tlsHandshake
+      name: TLS Handshake (ms)
+      priority: 10
+      type: integer
+    - jsonPath: .status.firstByte
+      name: First Byte (ms)
+      priority: 10
+      type: integer
+    name: v1
+    schema:
+      openAPIV3Schema:
+        description: InfluxDB is the Schema for the influxdbs API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: InfluxDBSpec defines the desired state of InfluxDB
+            properties:
+              organization:
+                description: The organization
+                type: string
+              provision:
+                description: Should the operator deploy and manage this InfluxDB,
+                  or is it an existing deployment?
+                type: boolean
+              token:
+                description: If we're not provisioning this InfluxDB through the operator,
+                  we need an admin token to do further provisioning
+                properties:
+                  secretKey:
+                    type: string
+                  secretName:
+                    type: string
+                type: object
+              url:
+                description: The URL of the InfluxDB server (Only used when provision
+                  is false)
+                type: string
+            required:
+            - provision
+            type: object
+          status:
+            description: InfluxDBStatus defines the observed state of InfluxDB
+            properties:
+              authenticated:
+                description: Can we authenticate against this InfluxDB?
+                type: boolean
+              available:
+                description: Is this InfluxDB responding on /health?
+                type: boolean
+              connectTime:
+                description: Connect Time
+                format: int64
+                type: integer
+              dnsResolutionDuration:
+                description: DNS Resolution time
+                format: int64
+                type: integer
+              firstByte:
+                description: First Byte
+                format: int64
+                type: integer
+              statsRefreshTime:
+                default: 0
+                format: int64
+                type: integer
+              tlsHandshake:
+                description: TLS Handshake
+                format: int64
+                type: integer
+            required:
+            - authenticated
+            - available
+            - connectTime
+            - dnsResolutionDuration
+            - firstByte
+            - statsRefreshTime
+            - tlsHandshake
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

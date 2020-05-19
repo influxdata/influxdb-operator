@@ -1,0 +1,10 @@
+domain: influxdata.com
+repo: github.com/influxdata/influxdb-operator
+resources:
+- group: influxdb
+  kind: InfluxDB
+  version: v1
+- group: influxdb
+  kind: Token
+  version: v1
+version: "2"

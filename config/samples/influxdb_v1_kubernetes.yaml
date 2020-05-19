@@ -1,0 +1,11 @@
+apiVersion: influxdb.influxdata.com/v1
+kind: InfluxDB
+metadata:
+  name: influxdb-sample
+spec:
+  provision: false
+  url: http://influxdb2.default
+  organization: 05a80639861e9000
+  token:
+    secretName: influxdb2-auth
+    secretKey:  admin-token

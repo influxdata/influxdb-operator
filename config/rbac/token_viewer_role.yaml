@@ -1,0 +1,20 @@
+# permissions for end users to view tokens.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: token-viewer-role
+rules:
+- apiGroups:
+  - influxdb.influxdata.com
+  resources:
+  - tokens
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - influxdb.influxdata.com
+  resources:
+  - tokens/status
+  verbs:
+  - get
